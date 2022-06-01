@@ -1,0 +1,1102 @@
+
+
+
+Docker Orchestration
+----------------------------------------------------------------------------------
+
+Recriação do Ambiente
+
+
+Docker Swarms 
+
+	- Docker Sarm é um gerenciador de clusters e é uma caracteristica que já vem na Docker Engine
+	- Docker Sarm está disponivel caso você tanto a Community Edition (CE) ou Enterprise Edition (EE)
+	- A funcionalidade Docker Swarm vem em um projeto separa que o Docker chama de Swarm Kit
+
+Swarm Cluster
+
+	- Um Swarn Clusters of Hosts ou Swarm Clusters of Nodes, é um cluster de Servers de Alta Disponibilidade que roda em Swarm Mode
+
+	- O que é de tao poderoso em um Swarm Cluster é que você pode criar o que chamamos de SERVICE, 
+	  por exemplo: Podemos ter um web server SERVICE com dezenas ou até cetenas de web servers e definir o Desire State
+                       Por exemplo: podemos definir a exposição da porta 80 para todos os web servers, podemos definir a Storage que o web servers necessitam
+				    tambem podemos dizer que queremos sempre 100 web servers funcionando
+
+	- Docker Swarm pode pegar estas definições e agir nelas para garantir que estejam sempre ativas e disponiveis
+
+	- Por exemplo, se tivermos um Work Node indisponivel por falha, todos os web servers que foram definidos como parte do SERVICE
+	  são automaticamente movidos para os outros Work Nodes dentro do Docker Swarm Cluster, para que os Web server que você definiu
+          estejam sempre disponiveis e rodando o tempo todo.
+
+	- O Swarm Cluster roda em o que chamamos de Managers e o trabalho rodado neles é feito pelos Works Nodes 
+
+	- Nos Work Nodes é que rodamos os Swarm Services
+
+
+Caracteristicas Core do Docker Swarm
+
+	- Alta Disponibilidade
+
+	- Load Balincig 
+
+	- Resiliency
+
+	- Placement
+
+	- Declarative service model 
+
+
+
+
+CONFIGURANDO O DOCKER SWARM
+-----------------------------------------------------------------------------------------
+
+	https://docs.docker.com/engine/swarm
+
+Para ver os comandos disponiveis
+
+	> docker swarm
+		-> 
+		   Usage swarm COMMAND
+
+		   Manage Swarm
+
+		   Options:
+
+			--help		Print usage
+
+		   
+		   Commands:
+			ca		Manage root CA
+			init		Initialize a swarm
+			joint		Joint as swarm a node and/or manager
+			joint-token	Manage joint torkens
+			leave		Leave the swarm
+			unlock		unlock swarm
+			unlock-key	Manager the unlock key
+			update		Update the swarm
+
+		  Run 'Docker swarm COMMAND --help' for more information on a command
+
+
+Para iniciar o Docker Swarm
+
+	> docker sworm init
+
+		->
+			Swarm initialized: current node (wt3wlcgn4cz7a36oxglgvd0ho) is now manager.
+	
+			To add a worker to this swarm, run the following command:
+
+				docker swarm join --token SWMTKN-1-1rby8nk...9jod 10.35.3.146:237
+
+			To add a manager to this swarm, run 'docker swarm join-token manager' and follow the instructions.
+
+
+
+Para ver o status do docker swarm
+
+	> docker node ls
+
+		-> 
+			ID 				HOSTNAME		STATUS		AVAILABILITY		MANAGER STATUS
+			wt3wlcgn4cz7a36oxglgvd0ho * 	DC2-N1			Ready		Active			Leader
+
+
+Adiconando um segundo node para o cluster
+
+	> docker swarm join-token worker
+		->
+			
+			To add a worker to this swarm, run the following command:
+
+				docker swarm join --token SWMTKN-1-1rby8nk...9jod 10.35.3.146:237
+
+O comando anterior vai mostrar o a sintaxe do comando inteiro, é so copiar a sequencia exibida acima 
+para adicionar um segundo worker node
+
+	>docker swarm join --token SWMTKN-1-1rby8nk...............9jod 10.35.3.146:237
+
+
+Checando o status do docker swarm
+
+	> docker node ls
+
+		-> 
+			ID 				HOSTNAME		STATUS		AVAILABILITY		MANAGER STATUS
+			rly45ios4thjvugwedmbau8vg	DC2-N2			Ready		Active			
+			wt3wlcgn4cz7a36oxglgvd0ho * 	DC2-N1			Ready		Active			Leader
+
+
+
+
+
+
+CONCEITOS: NODES, SERVICES, CONTAINERS, AND TASKS
+-------------------------------------------------------------
+
+- Iniciando com um simples Node, que é um host fisico ou uma VM cloud rodando docker engine
+
+- Supondo que você inicializou o docker swarm, e adicionou ao Swarm Cluster 3 Nodes
+
+- Supondo que você queira fazer o deploy de um novo Service em este docker cluster, o comando vai crear o service (nginx)
+  atraves do cluster com o nome de webapp1 (--name webapp1) e tambem rodando 6 tasks distribuidas nesse cluster (--replicas=6).
+
+	> docker service create --name webapp1 --replicas=6 nginx
+
+		--> (retorna uma ID)
+
+			avd0xbe5jv9nseqjei17bgvlf
+
+- Vendo os serviços rodando
+
+	> docker service ls
+
+		--> 
+			ID			NAME		NODE		REPLICAS		IMAGE		PORT
+			avd0xbe5jv9n		webaap1		replicated	6/6			nginx:latest
+	
+- Checando os containers, em cada node(VM ou maquina fisica)
+
+	> docker ps
+		CONRAINER ID		Image		COMMAND			CEATED		STATUS		PORTS	NAMES
+		6f10002c91f		nginx:latest	"nginx -g deamon ..."   41 seconds ago	Up 40 seconds	80/ycp	wevapp1.2.pj2hz...x4vko
+		65adc352d499		nginx:latest	"nginx -g deamon ..."   41 seconds ago	Up 40 seconds	80/ycp	wevapp1.2.fexlq...1j2b1
+
+
+
+
+
+QUORUM
+==========================================================
+Conjunto de Node Swarm Manages que assegurem que o cluster mantenhace saldavel
+
+- Para atingir o quorum seja atingido no cluster o Swarm Manager usa um algoritimo chamado Raft Algorithm
+
+- Para garantir fault tolerance no Swarm é recomendado ter no minimo 3 Swarm Manager
+
+- Recomendado sempre numeros impares de Swarm Managers
+
+- Ralf tolarancia tem um equação para calcular o nomero de clusters Managers que é (N-1)/2
+
+
+RODANDO APENAS MANAGER-ONLY NODES
+--------------------------------------------------------------
+- Por default manager nodes tambem podem agir como woeker nodes. Isso significa que o podemos agendar trabalhos que podem ser 
+  atribuidos a tasks para o manager node. 
+
+- Contudo, pelo motivo do manger node usar o Raft Consensus Algorithm na replicação de dados de forma consistente.
+  O Sawrm Cluster vai ficar sensivel a situações de estarvation. 
+
+- Voce deve isolar managers no seu swarm dos processos que possam as operações do warm heartbeat ou leader elections.
+
+- Para evitar interferencias com as operações do manger node. Você pode drenar os managers node fanzendo que fiquem indisponiveis 
+  a prestar o papel de worker node 
+
+	> docker node update --availability drain<NODE>
+
+
+
+Socker Visualizer
+------------------------------------------------------------
+
+Para rodar o docker visualizer em um dos Worker Nodes
+
+	> docker run -it -d -- 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock dockersamples/visualizer
+
+
+- Checando os containers vamos notar que temos uma imagem rodando que é o nosso visualizer
+
+	> docker ps
+		CONRAINER ID		Image				COMMAND			CEATED		STATUS				PORTS			NAMES
+		b8087a938998c		dockersamples/visualizer	"npm start"		5 seconds	Up 5 seconds (helth: starting)	0.0.0.0:8080->8080/tcp	unrufled_kepler
+		6f10002c91f		nginx:latest			"nginx -g deamon ..."   41 seconds ago	Up 40 seconds			80/ycp			wevapp1.2.pj2hz...x4vko
+		65adc352d499		nginx:latest			"nginx -g deamon ..."   41 seconds ago	Up 40 seconds			80/ycp			wevapp1.2.fexlq...1j2b1
+
+
+- Vamos supor que temos 10 serviços rodando com nosso webserver distribuidos atraves do Cluester, 
+  assegurando que 10 replicas deles estejam sempre rodando com o nginx server
+
+	> docker service ls
+		--> 
+			ID			NAME		NODE		REPLICAS		IMAGE		PORT
+			avd0xbe5jv9n		webaap1		replicated	10/10			nginx:latest
+
+
+- Se um dos host voce checar poe exemplo, vai constatar que existem pelo menos 5 dos serviços rodando em um host, se você estiver com 3 hosts
+  pode ser 2 estejam com distribuições de serviços iguais e cada um dos dois host com 5 serviços rodando e 1 deles com nenhum
+	> docker ps
+		CONRAINER ID		Image		COMMAND			CEATED		STATUS		PORTS	NAMES
+		6f10002c91f		nginx:latest	"nginx -g deamon ..."   41 seconds ago	Up 40 seconds	80/ycp	wevapp1.2.pj2hz...x4vko
+		65adc352d499		nginx:latest	"nginx -g deamon ..."   41 seconds ago	Up 40 seconds	80/ycp	wevapp1.2.fexlq...1j2b1
+		.
+		.
+		.
+
+
+- Voltando para o Host que está rodando o Docker Visualizer, vamos rodar um comando para copiar o ip desse host
+
+	> ip addr
+
+- abrir um tab e colcar o ip com a porta 8080 e adicionar ao browse
+
+	> 10.35.3.145:8080
+
+- Para testar o visualizer em tempo real vamos derrubar o serviço no Work Node 3, que é um dos que está funcionando com 5 serviços
+  Certifique-se de que voce está no servidor que quer derrubar
+
+	> sudo systemcrl stop docker
+
+- Checando se ele parou
+
+	> docker node ls
+		-> 
+		  Cannot connect to the Docker deamon at unix:///var/run/docker.sock. Is the docker deamon running?
+
+
+- Qunado voce voltar para o visualize, vai perceber que o Node 3 parou, e esta com uma bolinha vermelha marcando o mau funcionamento
+  Basta dá um update e é possivel perceber que os serviços que estavam rodando no Node que parou são migrados para o node que 
+  estava ocioso e sem nenhem serviço. Isso acontece graças ao Swarm que restarta os container e serviços no node disponivel
+
+
+
+
+ANALIZANDO DOCKER
+---------------------------------------------------------------------------------
+- O comando para inspecionar os DOCKERS, basta digitar o comando abaixo para obter a full sintax e todos os tipos de informações 
+  de como usar
+
+	> man docker inspect
+
+		-> docker-inspect -Return low-level information on Docker objects
+
+- Digitando o comando docker inspect no service webapp1
+
+	> docker inspect webapp1 | more
+
+- Agora em um container
+
+	> docker ps
+		CONRAINER ID		Image		COMMAND			CEATED		STATUS		PORTS	NAMES
+		6f10002c91f		nginx:latest	"nginx -g deamon ..."   41 seconds ago	Up 40 seconds	80/ycp	wevapp1.2.pj2hz...x4vko
+		65adc352d499		nginx:latest	"nginx -g deamon ..."   41 seconds ago	Up 40 seconds	80/ycp	wevapp1.2.fexlq...1j2b1
+		.
+		.
+		.
+	> docker inspect 6f1 | more
+
+- Podemos submeter as informações a um grep
+
+	> docker inspect 6f1 | grep IPAddress
+		--> "SecondaryIPAdress": null, 
+		    "IPAddress": "172.17.0.3",
+			    "IPAddress": "172.17.0.3",
+
+
+- Analizando o Service in low-level
+
+	> docker service ls
+		--> 
+			ID			NAME		NODE		REPLICAS		IMAGE		PORT
+			avd0xbe5jv9n		webaap1		replicated	10/10			nginx:latest
+	
+	> docker inspect webapp1 | more
+	> docker inspect webapp1 | grep Replicas
+
+
+DOCKER STACK
+----------------------------------------------------------------
+O docker stack define como rodar multiplos container rodando através do Docker Swarm Cluster, 
+Digamos que vamos fzer o deploy de uma multi tier complexa, e a nossa stack vai ter mais do que um web srvice tier
+vai ter tambem highly Available, e contendo Web Sevice, DB Service, RPT Service (um report services rodando multiples containers com multiplas tasks)
+O Docker Stack define todos esses serviços e como a rede, services e storage services serão exportos e como todos serao relacionados com a Stack.
+
+- Uma vez que definimos a Stack, Docker Swarm vai garantir que esses multiplos serviços relacionados permaneçam Highly 
+  Available e no no Desired State que nós definimos sem sempre contantemente mantidos
+
+
+O QUE É UM STACK FILE
+-----------------------------------------------------------------
+
+- Um um arquivo texto que é usado para definir um completo Highly Available, Highly Scalable application para um Swarm Cluster
+
+- Esse arquivo texto é escrito em formato YAML
+
+- Stack Files são portáveis do desktop para o Swarm Cluster
+
+
+
+EXEMPLO DE STACK FILE
+-----------------------------------------------------------------
+docker-stack.yml
+	
+	services:
+	  web:
+	    # replice username/repo:tag with your name and image details
+	    image: daviddavistx/webserver:1
+	    deploy:
+		replicas: 5
+		resources:
+		   limits:
+		     cpus: "0.1"
+		     memory: 50M
+		restart_policy:
+		  condition: on-failure
+	    ports: 
+	      - "80:80"
+	    networks:
+	      - webnet
+	networks:	
+	  webnet:
+
+- Para checa os comandos 
+
+	> docker stacks
+		->
+		Docker stack 
+				deploy		Deplot a new stack or update an existing stack
+				ls		List stacks
+				ps		List the tasks in a stack
+				rm 		Remove one or more stacks
+				services	List the services in the stack
+
+
+- Fazendo o deploy do Docker Stack 
+
+	> docker stack deploy --compose-file docker-stack.yml mystack
+		-->
+			Creatingservice mystack_web
+
+- Vamos checar se a stack foi criada
+
+	> docker stack ls 
+		-> 
+			NAME			SERVICE
+			mystack			1
+
+- Checando os Seviços na stack
+	
+	> docker stack ps mystack
+
+	ID		NAME			IMAGE			NODE		DESIRED STATE	CURRENT STATE		ERROR		PORTS
+	r52u2wlvid1h	mystack_web.1		davidavistx/webserver:1	DC2-N3		Running		Running		
+	lwd5a6w4wuz1	mystack_web.1		davidavistx/webserver:2	DC2-N2		Running		Running		
+	kxzcwyj37s7u	mystack_web.1		davidavistx/webserver:3	DC2-N1		Running		Running		
+	jq9ecw2e37s1	mystack_web.1		davidavistx/webserver:4	DC2-N3		Running		Running		
+	e3ci2w30psw1	mystack_web.1		davidavistx/webserver:5	DC2-N2		Running		Running		
+
+
+- Checando os serviços na Stack 
+
+	> docker stack services mystack
+
+		-> 
+			ID		NAME		MODE		REPLICAS	IMAGE				PORTS
+			pot1x8gqvkeu	mystack_web	replicated	5/5		daviddavistx/wevserver:1	*80->80/tcp
+
+
+MODIFICANDO A STACK COM O DOCKER SWARM
+-----------------------------------------------------------
+
+Modificando replics do SERVICE
+
+- Olhando as opções do comando
+
+	> docker service
+
+		-> 
+			docker service COMMAND
+
+			COMMANDS:
+				
+				cresare			Creae a new service
+				inspect 		Display detailed information on one or more services
+				logs			Fetch the log of a service or task
+				ls			List services
+				ps 			List the tasks of one or more services
+				rm			Remove one or more services
+				scale			Scale one or multiples replicated services
+				update			Update a service
+
+- Mudando o numero de replicas do serviço
+
+	> docker service update --replicas=20 mystack_web
+
+- Olhando o que aconteceu
+
+	> docker service ls
+		
+		->
+			ID		NAME		MODE		REPLICAS	IMAGE				PORTS
+			avd0xbe5jv9n	webapp1		replicated	6/6		nginx:latest
+			n646a75nuu4xd	mystack_web	replicated	20/20		daviddavistx/wevserver:1	*80->80/tcp
+
+
+Obs.: A unica maneira de modificar o serviço é quando ele está rodando
+
+Uma outra alternativa de modificar o serviço, é voltar ao stack file e fazer as mudanças no arquivo, por exemplo: 
+podemos mudar o numero de replicas de 5 para 30, memory de 50M para 100M, 0.1 CPU para 1 CPU
+direto no stack file
+Depois do arquivo alterado podemos dá um update na Stack
+
+	> cat docker-stack.yml
+	
+	services:
+	  web:
+	    # replice username/repo:tag with your name and image details
+	    image: daviddavistx/webserver:1
+	    deploy:
+		replicas: 5
+		resources:
+		   limits:
+		     cpus: "0.1"
+		     memory: 50M
+		restart_policy:
+		  condition: on-failure
+	    ports: 
+	      - "80:80"
+	    networks:
+	      - webnet
+	networks:	
+	  webnet:
+
+
+	> nano docker-stack.yml
+	
+	services:
+	  web:
+	    # replice username/repo:tag with your name and image details
+	    image: daviddavistx/webserver:1
+	    deploy:
+		replicas: 30
+		resources:
+		   limits:
+		     cpus: "1"
+		     memory: 100M
+		restart_policy:
+		  condition: on-failure
+	    ports: 
+	      - "80:80"
+	    networks:
+	      - webnet
+	networks:	
+	  webnet:
+
+
+
+- Vamos usar agora a opção deploy que pode ser usada para fazer o deploy ou update de um stack existente
+
+
+	> docker stack deploy --compose-file docker-file.yml  mystack
+
+
+- Verificando a stack
+
+	> docker service ls		
+		->
+			ID		NAME		MODE		REPLICAS	IMAGE				PORTS
+			avd0xbe5jv9n	webapp1		replicated	6/6		nginx:latest
+			n646a75nuu4xd	mystack_web	replicated	30/30		daviddavistx/wevserver:1	*80->80/tcp
+
+
+
+- Se verificarmos agora os processos da minha stack, vamos verificar a lista com 
+
+
+	> docker stack ps mystac
+
+
+	ID		NAME			IMAGE			NODE		DESIRED STATE	CURRENT STATE		ERROR		PORTS
+	r52u2wlvid1h	mystack_web.1		davidavistx/webserver:1	DC2-N3		Running		Running		
+	.
+	.
+	.
+	jq9ecw2e37s1	mystack_web.29		davidavistx/webserver:1 DC2-N3		Running		Running		
+	e3ci2w30psw1	mystack_web.30		davidavistx/webserver:1 DC2-N2		Running		Running		
+
+
+
+Docker service update, pode modificar os seriços rodando, vamos supor que queremos modificar a porta dos 30 serviços rodando
+Podemos checar a documentção para checar os comandos
+
+	docker service update [OPTIONS] SEVICE
+
+	[OPTIONS]
+
+	Name, shorthand	Default	Description
+	--args		Service command args
+	
+	--config-add		API 1.30+		Add or update a config file on a service
+	--config-rm		API 1.30+		Remove a configuration file
+	--constraint-add				Add or update a placement constraint
+	--constraint-rm					Remove a constraint
+	--container-label-add				Add or update a container label
+	--container-label-rm				Remove a container label by its key
+	--credential-spec	API 1.29+		Credential spec for managed service account (Windows only)
+	--detach , -d		API 1.29+		Exit immediately instead of waiting for the service to converge
+	--dns-add		API 1.25+		Add or update a custom DNS server
+	--dns-option-add	API 1.25+		Add or update a DNS option
+	--dns-option-rm		API 1.25+		Remove a DNS option
+	--dns-rm		API 1.25+		Remove a custom DNS server
+	--dns-search-add	API 1.25+		Add or update a custom DNS search domain
+	--dns-search-rm		API 1.25+		Remove a DNS search domain
+	--endpoint-mode					Endpoint mode (vip or dnsrr)
+	--entrypoint					Overwrite the default ENTRYPOINT of the image
+	--env-add					Add or update an environment variable
+	--env-rm					Remove an environment variable
+	--force		API 1.25+			Force update even if no changes require it
+	--generic-resource-add				Add a Generic resource
+	--generic-resource-rm				Remove a Generic resource
+	--group-add		API 1.25+		Add an additional supplementary user group to the container
+	--group-rm		API 1.25+		Remove a previously added supplementary user group from the container
+	--health-cmd		API 1.25+		Command to run to check health
+	--health-interval	API 1.25+		Time between running the check (ms|s|m|h)
+	--health-retries	API 1.25+		Consecutive failures needed to report unhealthy
+	--health-start-period	API 1.29+		Start period for the container to initialize before counting retries towards unstable (ms|s|m|h)
+	--health-timeout	API 1.25+		Maximum time to allow one check to run (ms|s|m|h)
+	--host-add		API 1.32+		Add a custom host-to-IP mapping (host:ip)
+	--host-rm		API 1.25+		Remove a custom host-to-IP mapping (host:ip)
+	--hostname		API 1.25+		Container hostname
+	--image						Service image tag
+	--init			API 1.37+		Use an init inside each service container to forward signals and reap processes
+	--isolation		API 1.35+		Service container isolation mode
+	--label-add					Add or update a service label
+	--label-rm					Remove a label by its key
+	--limit-cpu					Limit CPUs
+	--limit-memory					Limit Memory
+	--log-driver					Logging driver for service
+	--log-opt					Logging driver options
+	--mount-add					Add or update a mount on a service
+	--mount-rm					Remove a mount by its target path
+	--network-add		API 1.29+		Add a network
+	--network-rm		API 1.29+		Remove a network
+	--no-healthcheck	API 1.25+		Disable any container-specified HEALTHCHECK
+	--no-resolve-image	API 1.30+		Do not query the registry to resolve image digest and supported platforms
+	--placement-pref-add	API 1.28+		Add a placement preference
+	--placement-pref-rm	API 1.28+		Remove a placement preference
+	--publish-add					Add or update a published port
+	--publish-rm					Remove a published port by its target port
+	--quiet , -q					Suppress progress output
+	--read-only		API 1.28+		Mount the container’s root filesystem as read only
+	--replicas					Number of tasks
+	--replicas-max-per-node	API 1.40+		Maximum number of tasks per node (default 0 = unlimited)
+	--reserve-cpu					Reserve CPUs
+	--reserve-memory				Reserve Memory
+	--restart-condition				Restart when condition is met (“none”|”on-failure”|”any”)
+	--restart-delay					Delay between restart attempts (ns|us|ms|s|m|h)
+	--restart-max-attempts				Maximum number of restarts before giving up
+	--restart-window				Window used to evaluate the restart policy (ns|us|ms|s|m|h)
+	--rollback		API 1.25+		Rollback to previous specification
+	--rollback-delay	API 1.28+		Delay between task rollbacks (ns|us|ms|s|m|h)
+	--rollback-failure-action API 1.28+		Action on rollback failure (“pause”|”continue”)
+	--rollback-max-failure-ratio	API 1.28+	Failure rate to tolerate during a rollback
+	--rollback-monitor	API 1.28+		Duration after each task rollback to monitor for failure (ns|us|ms|s|m|h)
+	--rollback-order	API 1.29+		Rollback order (“start-first”|”stop-first”)
+	--rollback-parallelism	API 1.28+		Maximum number of tasks rolled back simultaneously (0 to roll back all at once)
+	--secret-add		API 1.25+		Add or update a secret on a service
+	--secret-rm		API 1.25+		Remove a secret
+	--stop-grace-period				Time to wait before force killing a container (ns|us|ms|s|m|h)
+	--stop-signal		API 1.28+		Signal to stop the container
+	--sysctl-add		API 1.40+		Add or update a Sysctl option
+	--sysctl-rm		API 1.40+		Remove a Sysctl option
+	--tty , -t		API 1.25+		Allocate a pseudo-TTY
+	--update-delay					Delay between updates (ns|us|ms|s|m|h)
+	--update-failure-action				Action on update failure (“pause”|”continue”|”rollback”)
+	--update-max-failure-ratio API 1.25+		Failure rate to tolerate during an update
+	--update-monitor	API 1.25+		Duration after each task update to monitor for failure (ns|us|ms|s|m|h)
+	--update-order		API 1.29+		Update order (“start-first”|”stop-first”)
+	--update-parallelism				Maximum number of tasks updated simultaneously (0 to update all at once)
+	--user , -u					Username or UID (format: <name|uid>[:<group|gid>])
+	--with-registry-auth				Send registry authentication details to swarm agents
+	--workdir , -w					Working directory inside the container
+
+
+
+
+
+
+
+- Vamos usar a opção --publish-add para adicionar ou remover a publicação da porta para o serviço mystack_web
+
+	> docker service update --publish-add published=8080, target=8080 mystack_web
+
+
+
+- Agora Inspecionando
+
+	> docker stack inspect mystac_web | frep 8080
+
+		"TargetPort": 8080,
+		"PublishedPort": 8080,
+		"TargetPort": 8080,
+		"PublishedPort": 8080,
+		"TargetPort": 8080,
+		"PublishedPort": 8080,
+
+
+
+
+MONTANDO VOLUMES
+---------------------------------------------------------------------------------------
+
+Ainda no comando Docker service update, você pode encontrar a opção para montar volumes --mount-add que pode adicionar ou atualizar o mount no srvice
+
+Exemplo:
+
+	docker service create --name=service --mount type=volume, source=test-data, target=/<path> nginx:alpine <ServiceName>
+
+	docker service update --mount-add type=volume, source=other-volume, target=/<path> <ServiceName>
+
+
+Para stack-files
+
+Montando paths como volumes, opcionalmente secificando um path na maquina host ( HOST:CONTAINER ), ou em um access mode( HOST:CONTAINER:ro )
+
+	volumes:
+	 - /etc/mysql
+	 - /etc:/sys
+	 - /etc:/etc:ro
+
+No caso proposto temos um numero de diferentes services rodando, vamos verifica-los
+
+	> docker service ls		
+		->
+			ID		NAME		MODE		REPLICAS	IMAGE				PORTS
+			avd0xbe5jv9n	webapp1		replicated	6/6		nginx:latest
+			n646a75nuu4xd	mystack_web	replicated	30/30		daviddavistx/wevserver:1	*80->80/tcp
+
+
+
+Montando o volume no serviço mystack_web, source indica o nome do volume
+
+	> docker service update   --mount-add type=volume,  source=web-vol,  target=/web-vol-dir   mystac_web
+
+
+
+Inspecionando o serviço da stack	mystack_web
+
+	> docker service inspect   mysack_web   |   grep  vol
+			"Type": "volume",
+			"Source": "web-vol",
+			"Target": "/web-vol-dir"
+
+
+Checando os volumes criados
+
+	> docker volume ls
+		
+		DRIVER			VOLUME NAME
+		local			web-vol
+
+	
+
+REPLICATED AND GLOBAL SERVICES
+--------------------------------------------------------------
+Ha dois tipos de replicated services, no default nós replicamos os serviços tais como web server 
+e todos os tipos de webserver vão ser iguais, e quando você diz ao docker que quer 10 destes 
+web server ele vai achar um jeito de rodar todos eles. Alguns nodes vão ter 5 outros nada
+tudo fica a cargo do Docker Swarm
+
+Um outro tipo você pode fazer o deploy de um GLOBAL SERVICE em um Docker Swarm, e o Global Service 
+vai rodar exatamente um container em cada um dos Nodes no Cluster.
+O Global SERVICE é muito bom no que diz respeito ao monitoramento
+
+https://docs.docker.com/engine/reference/commandline/service_create/
+
+
+
+NO comando Docker service update, temos o comando mode para trocar o tipo de replicação
+
+		--mode	replicated	Service mode (replicated or global)
+
+Vamos criar mais um serviço e dessa vez vamos especificar que queremos um serviço no modo global onde será replicado 
+igualmente em todos os nodes, nome=global-service e rodando a imagem nginx
+
+	> docker service create --mode global  --name global-service  nginx
+
+
+Quando checar os seviços ele estará no meio, e vamos notar que o MODE muda para global. Tambem vamos perceber que ele vai
+escolher o numero de 3 replicas, exatamente porque temos 3 nodes.
+
+	> docker service ls		
+		->
+			ID		NAME		MODE		REPLICAS	IMAGE				PORTS
+			avd0xbe5jv9n	webapp1		replicated	6/6		nginx:latest
+			tnmtisfhjkgb	global-service	global		3/3		nginx:latest
+			n646a75nuu4xd	mystack_web	replicated	30/30		daviddavistx/wevserver:1	*80->80/tcp
+
+
+DOCKER SERVICE LOGS
+------------------------------------------------------------------------------------------
+
+https://docs.docker.com/engine/reference/commandline/service_logs/
+
+	docker service logs
+
+	Description
+	Fetch the logs of a service or task
+
+	API 1.29+  The client and daemon API must both be at least 1.29 to use this command. 
+	Use the docker version command on the client to check your client and daemon API versions.
+
+	Swarm This command works with the Swarm orchestrator.
+
+	Usage
+	docker service logs [OPTIONS] SERVICE|TASK
+	
+	Options
+	Name, shorthand		Default			Description
+	-------------------------------------------------------------------------------------------------
+	--details					Show extra details provided to logs
+	--follow , -f					Follow log output
+	--no-resolve		Do not map IDs to Names in output
+	--no-task-ids		Do not include task IDs in output
+	--no-trunc		Do not truncate output
+	--raw		API 1.30+
+	Do not neatly format logs
+	--since		Show logs since timestamp (e.g. 2013-01-02T13:23:37) or relative (e.g. 42m for 42 minutes)
+	--tail	all	Number of lines to show from the end of the logs
+	--timestamps , -t		Show timestamps
+
+	Parent command
+
+	Command	Description
+
+		docker service	Manage services
+
+	Related commands
+	
+	Command	Description
+	
+	docker service create			Create a new service
+	docker service inspect			Display detailed information on one or more services
+	docker service logs			Fetch the logs of a service or task
+	docker service ls			List services
+	docker service ps			List the tasks of one or more services
+	docker service rm			Remove one or more services
+	docker service rollback			Revert changes to a service’s configuration
+	docker service scale			Scale one or multiple replicated services
+	docker service update			Update a service
+	Extended description
+
+	The docker service logs command batch-retrieves logs present at the time of execution.
+
+	The docker service logs command can be used with either the name or ID of a service, or with the ID of a task. 
+	If a service is passed, it will display logs for all of the containers in that service. If a task is passed, 
+	it will only display logs from that particular task.
+
+	Note: This command is only functional for services that are started with the json-file or journald logging driver.
+
+	For more information about selecting and configuring logging drivers, refer to Configure logging drivers.
+
+	The docker service logs --follow command will continue streaming the new output from the service’s STDOUT and STDERR.
+
+	Passing a negative number or a non-integer to --tail is invalid and the value is set to all in that case.
+
+	The docker service logs --timestamps command will add an RFC3339Nano timestamp , 
+	
+	for example 2014-09-16T06:17:46.000000000Z, to each log entry. 
+
+	To ensure that the timestamps are aligned the nano-second part of the timestamp will be padded with zero when necessary.
+
+	The docker service logs --details command will add on extra attributes, such as environment variables and labels, provided to --log-opt when creating the service.
+
+	The --since option shows only the service logs generated after a given date. You can specify the date as an RFC 3339 date, a UNIX timestamp, or a Go duration string (e.g. 1m30s, 3h). Besides RFC3339 date format you may also use RFC3339Nano, 2006-01-02T15:04:05, 2006-01-02T15:04:05.999999999, 2006-01-02Z07:00, and 2006-01-02. The local timezone on the client will be used if you do not provide either a Z or a +-00:00 timezone offset at the end of the timestamp. When providing Unix timestamps enter seconds[.nanoseconds], where seconds is the number of seconds that have elapsed since January 1, 1970 (midnight UTC/GMT), not counting leap seconds (aka Unix epoch or Unix time), and the optional .nanoseconds field is a fraction of a second no more than nine digits long. You can combine the --since option with either or both of the --follow or --tail options.
+	
+
+
+Checando as opçoes do comandos
+
+	> docker sevice logs
+
+
+Criando um novo serviço, single replica, image httpd
+
+	> docker service create --name webserver2 -p8080:80 httpd
+
+Para checar os serviçoes vamos digitar
+
+	> docker service ls
+		->
+			ID		NAME		MODE		REPLICAS	IMAGE				PORTS
+			avd0xbe5jv9n	webapp1		replicated	6/6		nginx:latest
+			k99tctlj54z0	webserver2	replicated	1/1		daviddavistx/wevserver:1	*80->80/tcp
+			tnmtisfhjkgb	global-service	global		3/3		nginx:latest
+			n646a75nuu4xd	mystack_web	replicated	30/30		daviddavistx/wevserver:1	*80->80/tcp
+
+
+Pegando o log do web server
+
+	> docker service logs webserver2
+
+
+Pegando o log do web server com real time update
+
+	> docker service logs -f webserver2
+
+
+
+Add or Remove LABEL METADATA
+------------------------------------------------------
+
+
+Adicionando um label
+
+	> docker node update --label-add prio1 DC2-N1
+		-> 
+			ID 				HOSTNAME		STATUS		AVAILABILITY		MANAGER STATUS
+			7ztr3p8j95gtlbpyixwmcbthz	DC3-N3			Ready		Active			Reachable
+			rly45ios4thjvugwedmbau8vg	DC2-N2			Ready		Active			Reachable
+			wt3wlcgn4cz7a36oxglgvd0ho * 	DC2-N1			Ready		Active			Leader
+
+
+Uma outra função dos label é colocar no service, constraints, tipo colocar uma constraint para rodar service somente
+em node que tenham label do tipo ="String com o nome do label"
+
+	Exemplo:
+	
+	> dockr service create --name redis_2 --constraint 'node.labels == queue' redis:3.0.6
+
+
+
+
+
+DOCKER CONTAINER COMMUNICATION
+---------------------------------------------------------------------------------------
+Similar a uma VM, docker container por default container fazem uma bridge para a  network
+em que eles estão rodando. 
+
+Por exemplo, supomos que você tenha servilos tais com web container e db container compartilhando o mesmo
+host. A aplicaçao quando vai falar com a rede, ele parte para a rede fisica tradicional. A comunilçao 
+parte saindo do docker Hoste para a interface ethernet
+
+Outra opção dos docker container, é isolar a comunicaçã dos outros. Por exemplo: conectar um container a rede
+e isolar aquele container ou você tambem pode isolar um conjunto de container criando um private container network
+somente para um groupo de containers
+
+O docker também oferece uma funcionalidade chamada overlay network que permite container em multipls host 
+se comunicarem com a rede visica atavés de um tunel
+
+
+
+
+
+
+TEMPLATES com DOCKER SERVICES
+---------------------------------------------------------------
+https://docs.docker.com/engine/reference/commandline/service_create/v
+
+- É uma nova caracteristica do Docker Swarm, é a habilidade de criar serviços a partir de um template
+
+- O beneficio é que o a informação do host pode ser embutido em um container no qual é feito o deploy
+  de um serviço
+
+- A única opção válida são hostname, mount e env
+
+- A sintaxe para o que você quer embutir no template é feita no format texto de um template
+
+- A sintaxe do comando:
+
+ 	> docker service create --hostname="{{Node.Hostname}}" httpd 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	

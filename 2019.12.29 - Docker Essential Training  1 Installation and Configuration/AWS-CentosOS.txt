@@ -1,0 +1,19 @@
+
+
+Instalando o Docker no AWS Center OS
+
+	> sudo yum remove docker docker-common docker-selinux docker-engine
+	> sudo yum install -y yum-utils device-mapper-persistent-data lvm2
+	> sudo yum-config-manager --add-repo https://download.docker.com/centos/docker-ce.repo
+	> sudo yum install docker-ce
+	> sudo systemcrl start docker
+	
+
+
+Se não existir, adicione o group docker e adionar o usuario corrente ao grupo, que no caso será o centerOs user: "$USER"
+
+	> sudo groupadd docker	
+	> sudo usermode -aG docker $USER
+
+	Obs: para estas mudaças terem efeito faça um login e log out desta VM
+

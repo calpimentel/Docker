@@ -1,0 +1,1260 @@
+
+
+AWS - Criando a Infra para Continuous Integrations
+----------------------------------------------------------------------------------------------------
+
+1) Criar um security group
+
+	* Nome: jenkins
+	* Description: web and ssh for jenkins
+
+	Rulues Inbound
+	Custom TCP - Port 8080 - 0.0.0.0/0::0   	(isso para permitir Jenkins)
+	Custom TCP - Port 22 - 0.0.0.0/0   		(Permitit SSH)
+
+2) Criar Instancia
+
+	* Escolher mesma VPC e Security Group (jenkins)
+	* Auto-assung Public IP : Use subnet settings (Enable)
+
+	* Storage: 80G
+	
+	* Security Goup:Jenkins				(O que foi criado acima)
+
+
+3) Conectar na Instancia
+
+
+	
+
+INSTALANDO O JENKINS
+---------------------------------------------------------------------
+
+1) Apos logado na instancia, vamos instalar o Jenkins. Primeiro vamos instalar o Repositorio oficial do Jenkins para instalação 
+
+	> sudo wet -0 /etc/yum.repos.d/jenkins.repo http://pkg.jenkins-ci.org/redhat/jenkins.repo
+
+		(  https://jenkins.io/doc/book/installing/#fedora  )
+
+2) Adicionar o Jenkins Organization Singning Key, que vai permitir nossa Organization instalar packages neste sistema
+
+	> sudo rpm  -import https://pkg.kenkins.io/redhat/jenkins.io.key
+
+		( https://jenkins-ci.org/redhat/jenkins-ci.org.key )
+
+3) Jenkins necessita do java. Então, instalar Java
+
+	> sudo yum install java-1.8.0
+
+4) Finalmente, podemos instalar o Jenkins
+
+	> sudo yum install jenkins -y
+
+5) Iniciar o Jenkins
+
+	> systemctl start jenkins.service 
+	> systemctl enable jenkins.service		(Habilitar o serviço Jenkins para garantir que reinicie apos o boot)
+
+6) Copiar o DNS publico da instancia e testar na porta do jenkins no webbrowser, exemplo:
+
+	ex2-35--171-87-115.compute-1.amazon.com:8080
+		-> 
+			exibiu um path:  /var/lib/jenkins/secretes/initialAdminPassword
+	
+			Aqui no browse vai aparecer um path, vamos copiar
+
+7) Obtendo a password atraves do path copiado
+
+	> sudo cat /var/lib/jenkins/secretes/initialAdminPassword
+		
+		> dentro desse arqui vai está a senha para usar o jenkins
+
+8) Vamos voltat ao browser e colar a senha que obtivemos dentro do arquivo do path acima
+
+9) Agora é so instalar os pluguns, Pode ser os plugins sugeridos
+
+10) Proximo passo cadastrar o usuario
+
+
+
+
+Após o Jenkins instalado, é essencial obter o Docker
+----------------------------------------------------------------
+
+Instalando o docker
+
+	> Sudo yum install docker
+
+Iniciando o serviço Docker
+
+	> systemctl start docker.service
+	> systemctl enable docker.service
+
+Da permissão ao usuario e o Jenkins para usar o docker
+
+	> sudo usermod -a -G docker  ec2-user 
+	> sudo usermod -a -G docker  jenkins 
+
+Para garantir que o docker e o jenkins tenham acesso vamos da um reboot na instancia
+
+	> sudo reboot
+
+Vamos testar o docker
+
+	> docker info
+
+	> docker run hello-world
+
+Vamos testar se o Jenkins pode usar o docker
+
+	> sudo -u jenkins docker run hello-world
+
+
+
+
+ESCOLHENDO UM HOST
+-------------------------------------------------
+
+	- Tradicional host com local storage
+
+	- Serviços existentes tais como Nexus
+
+	- Serviços de provedores de nuvem como EC2
+
+	- Docker Hub
+
+
+
+INSTALANDO NO SEU HOST
+--------------------------------------------------
+
+	https://docs.docker.com/registry
+
+
+INSTALANDO ON-PREMISES HOSTED SERVICE
+--------------------------------------------------
+
+	- Nexus é muito comum - você pode ja telo-lo
+
+	- Usando o seu modelo de segunrança existente
+
+	- Simple point of failure
+
+	- Você pode built-time outages into production outages
+
+
+
+AMAZON ECS
+--------------------------------------------------
+
+	- Você tambem pode usar o Serviço Elastic Container Service, 
+	  e lá usar o Amazon Elastic Container Registry na opção Repositories
+
+	
+No Jenkins, Vamos criar um projeto
+-------------------------------------------------------
+
+Clicar em New Item
+
+	Nome do projeto : docker-Test
+		Projeto free-style
+			Build: 
+				Execute Shell:
+
+					Command: docker run hello-world
+				
+
+Setando o repositorio para o Jenkins usar
+-------------------------------------------------------
+
+1) Ir no IAM, e criar uma role dando docker entry permitions para esses registries
+
+	AWS -> Services -> AIM -> Roles -> Create Role -> EC2 -> EC2
+		
+		Em permitions: Searche: Registry
+
+			AmazonEC2ContainerRegistryPowerUser
+		
+				Role name*: jenkins
+
+					Create Role
+
+2) Apos a criação da role, permitir que o Jenkins possa usar essa role
+
+	AWS -> Services -> EC2 -> Instance 
+	
+		Selecionar a instancia do serviço Jenkins
+
+			No botão Actions -> Instance Settings -> Attach/Replace IAM Role
+			
+					Selecionar Jenkins Role: Jenkins
+
+3) Agora vamos criar o nosso Registry
+
+	AWS -> Services Amazon ECS -> Repositories -> Get Start/Create new Repository
+
+		Step 1: Configure Repository
+			
+			Repository name: hello-world
+
+		Stepe 2: Build, tag, and push Docker image
+
+			Aqui as informações e comandos para usar o repositorio
+			
+			1) To install the AWS CLI and Docker and form more information on the steps bellow, visit the ECR documentaton page.
+			Note:
+			if you receive an 'Unknown options: --no-include-email" error, install the latest version of AWS CLI
+
+				> aws ecr get-login --no-include-email --region us-east-1
+
+			2) Run the Docker login command that was returned in the previous step.
+			Note:
+			if you are using Windows Power Shell, run the following command instead.
+		
+				> Invole-Expression -Command (aws ecr get-login --no-include-email --region us-east-1 )
+
+			3) Build your Docker image using the following command. For more information on buildinf a Docker file from scratch see the instructions
+			
+				> docker built -t helle-world .
+
+			4) After the build completes, tag your image so you can push the image to this repository:
+
+				> docker tag hello-worl:latest 089778365617.dkr.ecr.us-east-1.amazonaws.com/hello-world:latest
+
+			5) Run the following command to push this image to your created AWS repository
+
+				> docker push 089778365617.dkr.ecr.us-east-1.amazonaws.com/hello-world:latest
+
+
+
+ Voltar no Jenkis
+---------------------------------------
+
+Selecionar o projeto e alterar o Build
+
+	Selecionar o projeto docker-test
+
+		Settings
+
+			Build: 
+				Execute Shell:
+
+					Command: docker run hello-world		
+						 aws ecr get-login --no-include-email --region us-west-1 > ./login
+						 source ./login
+						 docker tag hello-world:latest 089778365617s.drk.ecr.us-east-1.amazonaws.com/hello-world:latest
+						 docker push 089778365617.dkr.ecr.us-east-1.amazonaws.com/hello-world:latest
+
+		Obs: o source command faz o shell interpretar o comando
+
+		Depois de alterar os comandos é só SALVAR
+
+Agora, ainda no Jenkins vamos na opção "Build Now"
+
+	Bom agora temos um Jenkins instance que pode da um push e pull do nosso proprio private registry
+
+
+
+	
+		
+BUILD TOOLS FOR DOCKER
+--------------------------------------------
+
+	- São na  maioria fonte de complexidade
+
+	- Fazer uma recriação de imagens é um desafio
+
+	- Passos para rodar uma build pode ser desconhecido após o fato
+
+	- Dinamicamente despachar as dependencias ter uma complexidade adicional
+	 
+	- Docker pode ajudar nestas questoes e remontar esses pontos no tempo
+
+
+
+MONTANDO REGISTRIES
+
+Exercise File: Ch02 > 02_03 > example-webapp.zip
+------------------------------------------------------------------------------
+
+1) Unzip o arquivo
+
+
+	> ls -la
+
+	Capstanfile		dev-config.edn		src
+	Dockerfile		env			test
+	Dockerfile,builder	project.cli		test-config.edn
+	Procfile		resources		
+	README.md
+	
+
+
+2) torna um git project
+
+	> git init
+	> gir add .			(adicionar tudo ao git)
+	> git commit -m 'getting start'
+
+3) Vamos agora para um local para da um push em tudo, vamos no Amazon ECS e criar 2 novos repositorios
+
+	AWS -> Services -> ECS -> repository -> Create repository
+
+		1o Repositorio:
+		
+			Repository name: exemple-webapp-builder
+				Successfully created repository
+				089778365617.dkr.ecr.us.east-1.amazonaws.com/example-webapp-builder
+
+		2o Repositorio
+	
+			Repository name: exemple-webapp		
+				Successfully created repository
+				089778365617.dkr.ecr.us.east-1.amazonaws.com/example-webapp
+
+
+4) Vamos iniciar voltando para o terminal e logando nesses registries
+
+	> aws ecr get-login --no-include-email --region us-east-1
+	
+		Obs: o resultado deste comando é um outro comando para rodar na linha de comando
+		     então copie o que ele poduzir e cole na linha de comando
+
+5) Olhando o conteudo do dockerfile
+
+	1 FROM openjdk:8
+	2 RUN apt-get update && apt-get install -y curl
+	3 RUN curl -o /usr/bin/lein https://raw.githibusercontent.com/technomancy/leiningen/stable/bin/lein
+	4 RUN chmod +x /usr/bin/lein
+
+	Comentários das linhas
+	======================
+	Linha 1: é a imagem do java jdk
+	Linha 2: dessa imagem vamos rodar apdate e instal do curl
+	Linha 3: com o curl vamos baixar as ferramentas de build para o closure
+	Linha 4: Torna o arquivo que foi baixado como executavel
+
+6) Vamos rodar o comando Numero 4 la das instruções do Amazon ECS para criar um novo repo
+
+	> docker build -t 089778365617.dkr.ecr.us-east-1.amazonaws.com/example-webapp:$(git rev-parse HEAD) -f Dockerfile.builder .
+
+		
+		Obs: 	-f Dockerfile.builder = determina um arquivo docker file que não é o efault que contém a sequencia de comando para construir na build do docker image
+
+			(git rev-parse HEAD) = um atalho shell para ir la no git e pegar a versão corrente e colocar aqui
+	
+			Exemplo do comando em GIT
+			> git rev-parse HEAD
+	    		  -> 
+				d90a8c9f1c39f207faa8bd27560b9f8c9e3d
+
+7) Vamos agora da um push da nossa build para o repositorio central para que não possamos perdelo
+
+	> docker push 089778365617.dkr.ecr.us-east-1.amazonaws.com/example-webapp:$(git rev-parse HEAD)
+
+
+8) Um vez gurdada no nosso repositorio, vamos usa-la para criar nosso projeto, 
+   usando --rm para não mater a imagem da build e os arquivos temporarios (vamos querer somente o resultado final()
+   -v "$PWD:/work" é a criaçao de um shared directory entre onde estamos no computador rodando este comando e o docker container a ser criado
+   bash -c "cd /work; lein uberjar" usando o bash shell para rodar o comando cd /work e depois lein uberjar que é o comando para rodar o build para esse projeto
+
+	> docker run -rm -v "$PWD:/work" 089778365617.dkr.ecr.us-east-1.amazonaws.com/example-webapp:$(git rev-parse HEAD) bash -c "cd /work; lein uberjar"		
+
+9) Agora vamos pegar um docker file para rodar nosso produto final
+
+	1 FROM java:8-alpine
+	2 MAINTAINER Your Name <you@example.com>
+	3
+	4 ADD target/uberjar/example-webapp.jar  /example-webapp/app.jar
+	5 
+	6 EXPOSE 3000
+	7
+	8 CMD ["java", "-jar", "example-webapp/app.jar"]
+
+
+	Comentando as lihas
+		Linha 1: vamos começar com a imagem java:8-alpine que é bem menor que a openjdk:8
+		Linha 4: Adiciona um arquivo do work directory para uma fix location	 
+		Linha 6: Expoe os serviços a porta 3000
+		Linha 8: Roda o arquivo
+
+
+10) Agora vamos construir a imagem do web-app
+
+	> docker built -t 089778365617.dkr.ecr.us-east-1.amazonaws.com/example-webapp:$(git rev-parse HEAD) 
+
+
+11) Vamos rodar o continer
+
+	> docker run --rm -p 3000:3000 	089778365617.dkr.ecr.us-east-1.amazonaws.com/example-webapp:$(git rev-parse HEAD) 
+
+	
+12) Testando a aplicação do container no browser
+
+	localhost:3000
+
+
+
+
+
+SETANDO O PROJETO - Automatizando o processo com Jenkins e Github
+---------------------------------------------------------------------
+
+No Git, vamos criar um novo repositorio para o projeto com o nome de example-web
+
+
+	https://github.com/new
+
+		Create a New Repository
+
+			Owner		Repository Name
+			thearthur  / 	example-webapp
+
+	
+
+No terminal vamos iniciar o projeto do git
+
+	> git init
+	> git add .
+	> git commit -m 'getting started'
+
+
+Vamos vincular ao nosso repositorio no git
+
+	> git remote add origin gir@ithib.com:thearthur/exemple-webapp
+	> git push origin master
+
+
+Vamos configuras o jenkins, para ser capaz de puxar do git repositorio
+
+	> sudo yum install git
+
+Apos o git instalado, ficamos logados no git server, então vamos desconectar do server
+
+	> logout
+
+Vamos criar uma key para o jenkins usar no github
+
+	> ssh -keygen -f jenkins-key
+
+Agos temos dois arquivos no diretorio, a key particular e a publica
+
+	> ls 
+	
+		jenkins-key
+		jenkins-key.pub
+
+
+Vamos dá a key publica para GitHub a a key privada para o jenkins, para isso vamos começar com o publico
+basta pegar o conteudo do arquivo, copiar e colar na linha de comando. O proprio conteudo é um comando
+
+	> cat jenkins-key.pub
+
+	> ....		(conteudo do arquivo é copiado e colado em outra linha de commando)
+
+Antes de executar o conteudo do arquivo da key publica, vamos voltar no browse, especificamente no Jenkins e criar um projeto
+
+	Jenkins -> New Item 
+		
+	1) Criar o projeto Jenkins
+
+		Enter an item name: example-webapp	
+		Project type: Multibranch Pipeline
+ 
+	2) General
+
+		Branch Sources
+			Add sources	(Clicar nesse botão e escolher git)
+				Git
+					
+					Project Repository: git@github.com:theathur/example-webapp
+					       Credentials:  Add (vamos adicionar jenkins e preencher os dados da credencial)
+								 Domain: Global credentials(unrestrcted)
+          							   Kind: SSH Username with private key
+									.
+									.
+							       username: git
+							    private key: (aqui vamos colar o conteudo do arquivo da private key do arquivo do comando anterior)
+
+								
+					         Behaviors: 
+					 Property strategy: 
+
+				
+No GitHub
+
+	No repositorio do projeto:
+
+		Settings -> Deploy Keyss
+			Add deploy keys
+				Title: jenkins
+				  Key: (tambem copiar o conteudo do arquivo aqui)
+
+			Add Keys
+
+
+Voltar no projeto do jenkins e salvar
+
+
+
+AUTOMATIZANDO O PROCESSO DE CRIAR A IMAGEM NO JENKINS
+---------------------------------------------------------------------------------------------------------------
+OBS: Jenkinsfile : é o arquivo que contem todos os stages do projeto jenkins
+
+	Nesse arquivo, em um dos stages, pecisamos defini o nosso repositorio, 
+	especialmente o que está no AWS
+
+		ex: olhe abaixo uma parte desse arquivo, em um dos stages ha um login no registry
+		    e como estamos no aws, precisamos definir o nosso ecs repository:
+			
+				ACCOUNT_REGISTRY_PREFIX = "089778365617.dkr.ecr.us-east-1.amazon.com"
+
+		-------------------------------------------------------------------------------------------------------------
+		Jenkinsfile
+		-------------------------------------------------------------------------------------------------------------
+		def buildImage
+		def productionImage
+		def ACCOUNT_REGISTRY_PREFIX
+
+		pepeline {
+
+		  agent any
+
+		  stages {
+
+			stage('Check Source Code and Loggin Into Registry'){
+			
+			  steps{			
+				echo 'Loggin Into the Private ECR Registry'
+				script {
+					
+					GIT_COMMIT_HASH = sh (script: "git log -n 1 --pretty=format:'%H', returnStdout: true)
+					ACCOUNT_REGISTRY_PREFIX = "089778365617.dkr.ecr.us-east-1.amazon.com"
+					sh """"
+					\$(aws ecr get-loggin --no--include-email --region us-east-1)
+					""""
+				}
+			  }
+			}
+
+
+			stage('Make a Buolder Image'){
+			
+			  steps{			
+				echo 'Starting to Build the project builder docker image'
+				script {
+					builderImage = docker.build("${ACCOUNT_REGISTRY_PREFIX}/example-webapp-builder:${GIT_COMMIT_HASH}", "-f ./Dockerfile.builder .")
+					builderImage.push()
+					builderImage.push("$env.GIT_BRANCH}")			
+					builderImage.inside('-v $WORKSPACE:/output -u root') {
+					   sh """"
+				   	     cd /output
+					     lein uberjar
+					   """"
+					}
+				}
+			  }
+			}
+
+
+			stage('Unit Tests'){
+			
+			  steps{			
+				echo 'running unit test in the builder image.'
+				script {
+					builderImage.inside('-v $WORKSPACE:/output -u root') {
+					   sh """"
+				   	     cd /output
+					     lein uberjar
+					   """"
+					}
+				}
+			  }
+			}
+
+
+			stage('Build Production Image'){
+			
+			  steps{			
+				echo 'Starting to Build the project builder docker image'
+				script {
+					builderImage = docker.build("${ACCOUNT_REGISTRY_PREFIX}/example-webapp:${GIT_COMMIT_HASH}", "-f ./Dockerfile.builder .")
+					builderImage.push()
+					builderImage.push("$env.GIT_BRANCH}")			
+				}
+			  }
+			}
+
+
+		  }
+
+		}
+		-------------------------------------------------------------------------------------------------------------
+		
+	
+
+
+	
+
+
+STAGES ( DEVELOPMENT, STAGING, AND PRODUCTION)
+---------------------------------------------------------------------------
+
+Desenvolvimento Tradicional
+
+	- Ambiente de Desenvolvimento (geralmente um laptop)
+	
+	- Staging Enverironment ( mas similar ao Production Environment)
+
+	- Production Environment (o ambiente de uso)
+
+	- Cada um destes ambientes necessitam de um deployer
+
+	- Um program de deploy pode de forma semelhante fazer um build para todos os ambientes
+
+	
+
+BRANCH-BASED DEPLOYMENT
+---------------------------------------------------------------------------
+
+	- Fixed Branch release from the "deply branch"
+
+	- Good place to start
+
+	- Will use this method fot the first demo
+
+
+
+TIPOS DE DEPLOYMENT
+==========================
+
+	COMMIT-BASE DEPLOYMENT
+	-----------------------------------------------------------------------------
+
+		- Anything can be deployed
+
+		- Hash to deploy is an imput to the deploy process
+	
+		- Will use this method for the second demo
+
+		- Recomended this approch
+
+
+
+	CONTINOUS DEPLOYMENT
+	---------------------------------------------------
+
+		- Can be frightening because code goes to production as soon as it checked in 
+
+
+	CONTINOUS DELIVERY
+	---------------------------------------------------
+
+		- Less frightening because every code commit get delivered to the point of development, but does not actually deploy
+
+
+
+	UPDATE IN PLACE
+	--------------------------------------------------
+
+		- Most commum and manually
+
+		- Remove old servers, then add new ones
+
+		- Requires downtime
+
+		- No overlap
+
+		- Very easy to implement
+
+
+	BLUE-GREEN DEPLOYMENT
+	--------------------------------------------------
+
+		- Running System it is called Blue
+
+		- New System about it to deploy called Green
+
+		- Create new service before tearing down old ones
+
+		- When both new and old services are running, flip traffic to the new service
+
+		- Can be done with routing (portable IP address, etc.) DNS, load balances, and other methods
+
+		- No overlap
+
+		- Very easy to implement
+
+
+
+	BLUE-GREEN DEPLOYMENT
+	--------------------------------------------------
+
+		- Create a new service, then assign production to it
+	
+		- Useful for services that are not managed by other services
+
+		- Almost always works
+
+
+	BLUE-GREEN DEPLOYMENT WITH LOAD BALANCERS
+	--------------------------------------------------
+
+		- New services received part of the production traffic
+
+		- Faster option than DNS assigment
+
+		- Overlap between old and new releases
+	
+		- Load balancer need to be maintained independently
+
+		
+
+
+FIRST DEPLOYMENT WITH JENKINS
+------------------------------------------------------------------------------
+
+O Plano consiste em criar uma instancia no projeto jenkins, e toda vez que ocorrer uma brench de release
+o projeto fará um deploy
+
+
+
+Mas primeiro vamos precisar de um local para fazer o deploy, como primeira tarefa vamos 
+da permissão a instancia com o IAM do AWS
+
+
+1) No AWS, vamos conceder permissoes
+
+
+	AWS -> Services -> IAM -> Polices -> Create a policy
+
+		Service: EC2 Container Registry
+		Actions: (x) List
+			 (x) Read
+			 ( ) Write
+
+  	      Resources: (x) specific
+			 ( ) all resources 
+
+			 Repository: Add ARN -> Specify ARN for repository: arn:aws:ecr.us-east-1:089778365617:repository/example-webapp
+
+	
+	      Review
+		
+			Name: production-website
+
+				Create pollyce
+
+
+2) Agora vamos criar uma Rolle para anexar a police a instancia
+
+	AWS -> Service -> IAM -> Role -> Create Role -> EC2 
+				Use case -> EC2
+
+	Next Permissions
+
+		Policy type: production-website
+
+	Next Review
+
+		Role Name: production-website
+
+	Create a role
+
+
+3) Agora vamos iniciar uma EC2 Instancia que possa usar essa role e criar nosso webserver
+
+	AWS -> Services -> EC2 -> Instance -> Launch Instance
+		
+		AMI: Amazon Linux 2 LTS Candidate AMI 2017.12.0 (HVM), SSD Volume Type
+		
+			t2.micro
+
+				Network: Usar a mesma VPC
+				Subnet: a primeira
+				Auto-assing Public IP: Use setting (Enable)
+				
+				IAM role: production-website
+
+
+			Advanced Details
+
+				user data: #!/bin/bash
+					   sudo yum install docker -y
+					   sudo systemctl enable docker.service
+					   sudo systemctl start.docker.service
+					   aws ecr get-login --no-include-email --region us-east-1 | bash
+					   
+					   cat << EOF > start-website
+					   aws ecr get-login --no-include-email --region us-east-1 | bash
+					   sudo docker run -p 3000:3000 089778365617.dkr.ecr.us-east-1.amazon.com/example-webapp:release
+					   EOF
+					   sudo mv start-website /var/lib/cloud/script/start-website
+					   sudo chmod +x /var/lib/cloud/scripts/start-website
+
+							obs: disponivel nos exercicios:  ch03 > 03_02 > user_data.sh
+
+
+4) Agora vamos usar o Jenkins para da um reboot no webserver, mas ele ainda não tem permissão para dá um reeboot na máquina
+   vamos fazer isso primeiro, dá permissões ao Jenkins para da reboot na maquina para que ela possa pegar uma nova versão
+   caso haja uma
+
+
+	AWS -> IAM -> Services -> Roles -> Jenkins -> Attach Policies -> AmazonEC2FullAccess
+
+5) Vamos colocar mais um stage no Jenkinsfile apos o build stage, que vai fazer o deploy quando a branch for igual 
+   a release, quando a branch release acontecer, o servidor vai ter um deploy e vai temabem ser rebootado
+
+		-------------------------------------------------------------------------------------------------------------
+		Jenkinsfile
+		-------------------------------------------------------------------------------------------------------------
+		def buildImage
+		def productionImage
+		def ACCOUNT_REGISTRY_PREFIX
+
+		pepeline {
+
+		  agent any
+
+		  stages {
+
+			stage('Check Source Code and Loggin Into Registry'){
+			
+			  steps{			
+				echo 'Loggin Into the Private ECR Registry'
+				script {
+					
+					GIT_COMMIT_HASH = sh (script: "git log -n 1 --pretty=format:'%H', returnStdout: true)
+					ACCOUNT_REGISTRY_PREFIX = "089778365617.dkr.ecr.us-east-1.amazon.com"
+					sh """"
+					\$(aws ecr get-loggin --no--include-email --region us-east-1)
+					""""
+				}
+			  }
+			}
+
+
+			stage('Make a Buolder Image'){
+			
+			  steps{			
+				echo 'Starting to Build the project builder docker image'
+				script {
+					builderImage = docker.build("${ACCOUNT_REGISTRY_PREFIX}/example-webapp-builder:${GIT_COMMIT_HASH}", "-f ./Dockerfile.builder .")
+					builderImage.push()
+					builderImage.push("$env.GIT_BRANCH}")			
+					builderImage.inside('-v $WORKSPACE:/output -u root') {
+					   sh """"
+				   	     cd /output
+					     lein uberjar
+					   """"
+					}
+				}
+			  }
+			}
+
+
+			stage('Unit Tests'){
+			
+			  steps{			
+				echo 'running unit test in the builder image.'
+				script {
+					builderImage.inside('-v $WORKSPACE:/output -u root') {
+					   sh """"
+				   	     cd /output
+					     lein uberjar
+					   """"
+					}
+				}
+			  }
+			}
+
+
+			stage('Build Production Image'){
+			
+			  steps{			
+				echo 'Starting to Build the project builder docker image'
+				script {
+					builderImage = docker.build("${ACCOUNT_REGISTRY_PREFIX}/example-webapp:${GIT_COMMIT_HASH}", "-f ./Dockerfile.builder .")
+					builderImage.push()
+					builderImage.push("$env.GIT_BRANCH}")			
+				}
+			  }
+			}
+
+			stage('Deploy to Production fixed server'){
+			  
+			  when {
+			     branch 'release'
+			  }
+			
+			  steps{			
+				echo 'Deploying release to production'
+				script {
+					ProductionImage.push("deploy")
+					sh """"
+					   aws ec2 reboot-instance --region us-east-1 --instance-ids i-0e438e2bf6427c9d
+					""""					
+				}
+			  }
+			}
+
+		  }
+
+		}
+		-------------------------------------------------------------------------------------------------------------
+		
+		
+6) Vamos testar no terminal fazendo uma branch release para o github
+
+	> git add Jenkinsfile
+	> git commit -m 'adding deployment for fixed server'
+	> git push origin master:release
+
+	
+			
+			
+ECS CLUSTER
+-------------------------------------------------------------------
+
+1) Criando o Cluster
+
+	> AWS -> Services -> ECS -> Create Cluster -> 		
+			
+
+2) Da mais permissões ao Jenkins para criar stacks e Policies
+
+	AWS -> Services -> IAM -> Roles
+
+		Selecionar a role criada: Jenkins
+
+			Attach Policy: IAMFullAccess
+				       AmazonEc2FullAccess
+
+	
+3) Criae um Application LoadBalancer para distribuir o trafico para o nosso service de docker containers
+
+	AWS -> Services -> EC2 -> Load Balancer -> Create Load Balancer
+
+		Applcation Load Balancer -> Create
+
+		Step 1: 
+				Name: production-website
+			      scheme: (X) internet-facing
+				      ( ) internal
+		     IP Address Type: Ipv4
+
+		     Listeners
+			HTTP  		80
+
+		    VPC a mesma dos servidores e clusters
+		    Availability Zone: Vamos marcar todas
+
+		Step 2:
+	
+			Vai informar que o servidor está aberto para o mundo
+
+		Step 3: 
+
+			Create a new security group
+				Name: production-website
+				HTTP		80
+
+		Step 4: 	
+
+			Configuring Routing
+
+				Target Group: New Target group
+				        Name: somethingnotused
+				    Protocol: HTTP
+				        Port: 80
+				 Target type: instance
+			Health checks
+				    Protocol: HTTP
+					Path: /somethingasonlyanexample
+
+
+		Step 5:
+	
+			em branco
+
+			create load balancer
+
+	
+4) Depois do Load Balancer em ordem, vamos colocar o Jenkins para fazer alguma coisa por nós
+
+	Exercisefiles: Ch03 > 03_05 > service.yaml
+
+		run-stack.sh
+			dados para o deploy do jenkins, substituir vpc, subnet e outros valores
+
+		service.yuml
+			Define tudo sobre productions em yuml format, configura todos os resources que vamos precisar para o deploy
+
+
+5) NO Jenkins file, acrescentar o stage para deploy on production, e atualizar o ARN do seu loadbalancer
+
+
+
+		-------------------------------------------------------------------------------------------------------------
+		Jenkinsfile
+		-------------------------------------------------------------------------------------------------------------
+			.
+			.
+			.
+			stage('Deploy to Production'){
+			  
+			  when {
+			     branch 'release'
+			  }
+			
+			  steps{			
+				echo 'Deploying release to production'
+				script {
+					PRODUCTION_ALB_ARN="colar aqui o arn do load balance criado"
+					sh """"
+					./run-stack.sh example-webapp-production ${PRODUCTION_ALB_LISTENER_ARN}
+					""""					
+				}
+			  }
+			}
+
+		  }
+
+		}
+		-------------------------------------------------------------------------------------------------------------
+		
+6) Testando via git no terminal 
+
+
+	> git add Jenkinsfile run-stack.sh
+	> git commit -m 'adding real deployer'
+	> git push origin master
+
+
+
+7) Se não funcionar no jenkins, vamos no AWS Console, e em claudformation para ver os states em acão
+
+	AWS -> Services -> CloudFormation -> Stacks - 
+
+		Selecionar a Stack name:
+			
+				example-webapp-production
+
+					Depois a aba: Events
+
+						
+
+
+8) Monotoring
+
+	Some Questions
+	----------------------------------------
+
+		- Did a release take site down?
+
+		- Did the recent release make the error rate worse?
+
+		- Did the error rate increase by more thant 50% within 10 minutes of a release?
+
+		- Is the increase in latency a failure?
+
+
+	Autmatic Job Reverts
+	-----------------------------------------
+
+		- Call a human
+
+		- Roll forward
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CRIANDO UM AMBIENTE PARA TESTE
+-----------------------------------------------------------------------
+
+1) NO AWS vamos criar um outro ambiente para teste, primeiro um novo load balancer
+
+	AWS -> Services -> EC2 -> Load balancer -> Create Load Balancer
+
+		Appplication Load Balancer -> Create
+
+		Step 1: 
+				Name: testing-website
+			      scheme: (X) internet-facing
+				      ( ) internal
+		     IP Address Type: Ipv4
+
+		     Listeners
+			HTTP  		80
+
+		    VPC a mesma dos servidores e clusters
+		    Availability Zone: Vamos marcar todas
+
+		Step 2:
+	
+			Vai informar que o servidor está aberto para o mundo
+
+		Step 3: 
+
+			Create a new security group
+				Name: production-website
+				HTTP		80
+
+		Step 4: 	
+
+			Configuring Routing
+
+				Target Group: New Target group
+				        Name: anotherthingnotused
+				    Protocol: HTTP
+				        Port: 80
+				 Target type: instance
+			Health checks
+				    Protocol: HTTP
+					Path: /somethingasonlyanexample
+
+
+		Step 5:
+	
+			em branco
+
+			create load balancer
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  	  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+			

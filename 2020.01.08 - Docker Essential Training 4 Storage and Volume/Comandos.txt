@@ -1,0 +1,728 @@
+
+
+CONTAINER DATAS
+---------------------------------------------------------
+
+- Dados das aplicações são armazenados sempre em Data Bases, Middleware
+  e sempre em container separados
+
+- Casa container tem dados que necessitam se acessados, suas aplicações necessitam desses dados
+  para realizar o trabalho que lhe é atribuido
+
+- Onde os dados das aplicações são armazenados
+
+	* Não devem ser amazenados dentro dos containers
+
+	* Containers são ephemeral (disposable), também são stateless
+
+	* Quando um container e stopped, os dados em um container não são mais acessíveis
+
+	* Container são armazenados tipicamente em cada host onde se encontram, ou seja, um container
+    	  armazenado em um host, não pode acessar dados em outro host
+
+	* Uma filesystem de um container não é projetado para uma alta performance de I/O
+
+
+
+OPÇÕES PARA DATA STORAGE PARA CRITICAL APPLICATIONS
+--------------------------------------------------------------
+
+1) DOCKER VOLUMES
+
+	- É a forma recomendada para dados persistentes, armazenados em /etc/lib/docker/volumes
+
+
+2) BIND MOUNTS
+
+	- Tem um numero limitado de funcionalidades e você deve usar o exato file path no host;
+
+	- Docker Bind Mounts são altamente recomendados em véz Docker 
+
+	- Funciona da seguinte forma: o conrainer é montado acima da file system do sistema e um 
+  	  bind mount se liga diretamente a file system do sistema e tem acesso a uma área especifica
+ 	  dessa file system
+
+
+3) TEMPFS MOUNT
+
+	- tempfs mount são armazenados somente na memória do sistema linux/host onde roda o docker (menos recomendado)
+
+
+
+COMPARANDO OBJECT STORAGE SOLUTIONS
+-----------------------------------------------------------------
+
+- Bloc Storage
+
+	* É o local onde criamos pedaços fixos de dados, 
+
+	* Ésses pedaços de dados não tem nemhum tipo de metadata associados a eles e o sistema não tem ideia 
+	  do que esses pedaços de dados são e onde eles estão
+
+	* São ótimos para apps com intensivo transito de I/O, um bom exemplo: SAN storage usa bloc storage com protoloclo tipo ICSI
+
+
+- OBJECT STORAGE
+
+	* Por outro lado Object storage usa metadados e um unique identifier
+
+	* Não há nenhuma organização ou hierarquia aos objetos
+	
+	* Mas a escalabibilidade é limitada
+
+	* O acesso aos dados são feitos por chamadas HTTP
+
+	* Um exemlo sao os Amazon S3 storage
+
+	
+- COMPARADO O USO
+
+	* Block storage é usado para os dados das aplicações em docker containers
+
+	* OBJECt STORAGE são usados para imagens docker para um Docker Registry
+
+
+
+DOCKER STORAGE LAYER SYSTEM
+--------------------------------------------------------------------
+
+- Docker são feitos de multiplos layers, e multiplos container são baseados em Dockeuma mesma image. 
+  Quando uma imagem é instanciada em um container, um layer é criado no topo dos outros (o qual é 
+  delatado quando o container é removido).
+
+- Docker usa storage driver para gerenciar o conteudo de uma imagem layer e o writable container layer. 
+  Cada storage drive cuida de uma implementação diferentemente, mas todos usam stackable image layers e 
+  a estratégia copy-on-write (CoW).
+
+
+
+
+DOCKER FILE SISTEM IN ACTION
+---------------------------------------------------------------
+
+Se temos por exemplo uma imagem httpd, 
+
+	> docker image ls
+
+		htttpd		latest		805130e51aed9		3 months ago		178MB
+
+Se inspecionarmos o essa imagem, vamos ver muitas informações, mas no final delas, estão as layers dessa imagem. E vamos ver
+várias delas que são todas combinadas para criar esta unica image
+
+	> docker image inspect 805
+
+
+Para ver como essas imagens são criadas, no fim da lista é o primeiro comando com 123 mb que criou a imagem
+Note que configurações, atualizações e arquivos copiados ocorrem, e na primeira linha, que é basicamente
+o ultimo comando temos o id da imagem, que também é disponibilizado por configuração
+
+Obs: 	todas as imagens que tem <missing> são feitas em outros host e não neste container que está rodando a imagem
+	
+
+	> docker history 805
+
+	IMAGE		CREATE		CREATE BY						SIZE				COMMENT
+	805130e51ae9	3 months ago	/bin/sh -c # (nop) CMD ["httpd-froreground"]		0B
+	<missing>	3 months ago	/bin/sh -c # (nop) EXPOSE 80/tcp			0B
+	<missing>	3 months ago	/bin/sh -c # (nop) COPY file:761e313354b918...		133B
+	<missing>	3 months ago	/bin/sh -c # set -eux; buildDeps="    bzip2...		9.93MB
+	<missing>	3 months ago	/bin/sh -c # (nop) ENV APPACHE_DIST_URLS=ht...		0B
+	<missing>	3 months ago	/bin/sh -c # (nop) ENV HTTPD_PATHCES=			0B
+	<missing>	3 months ago	/bin/sh -c # (nop) ENV HTTPD_SHA256=de0251		0B
+	<missing>	3 months ago	/bin/sh -c # (nop) ENV HTTPD_VERSION=2.4.33		0B
+	<missing>	3 months ago	/bin/sh -c # apt-get update && apt-get inst..		44.2MB
+	<missing>	3 months ago	/bin/sh -c # { echo 'dev http://deb.debian... 		161B
+	<missing>	3 months ago	/bin/sh -c # (nop) ENV OPENSSL_VERSION=1.0...		0B
+	<missing>	3 months ago	/bin/sh -c # (nop) ENV NGHTTP2_VERSION=1.1...		0B
+	<missing>	3 months ago	/bin/sh -c # (nop) WORKDIR /usr/local/apache2		0B
+	<missing>	3 months ago	/bin/sh -c # mkdir -p "$HTTPD_PREFIX" & ch... 		0B
+	<missing>	3 months ago	/bin/sh -c # (nop) ENV HTTPD_PREFIX=/usr/l...		0B
+	<missing>	3 months ago	/bin/sh -c # echo 'deb httpd://deb.debian.org		55B
+	<missing>	3 months ago	/bin/sh -c # (nop) CMD ["bash"]				0B
+	<missing>	3 months ago	/bin/sh -c # (nop) ADD file:bc844c4476367b5...		123MB
+
+
+
+DOCKER STORAGE DRIVE
+--------------------------------------------------
+- No container ha uma area de escrita para armazenar dados e ha cargas de dados que exigem que você ponha os dados
+  no container area e para escrever nela você precisa de um storage driver.
+
+- Starage Drivers ja veem com o Docker, mas há inumeros outros que você pode plugin e plugout
+  Um Storage driver permite que você possa colocar daos nos layers do container que permitem armagenagem
+  Mas há diferentes opções de storage drivers:
+
+	* Overlay: é recomendado para Docker CE. E não exige extra configurações
+
+	* devicemapper:
+
+- Dependendo da distribuição do linux a diferentes recomendações do storage driver
+	
+	Linux Distribution		Recomended storage drivers
+	---------------------------------------------------------------------------------------------
+	- Docker CE no Ubuntu		aufs, devicemapper, overlay2 (Ubunto 14.04 ou later), overlay, zfs, vfs
+	
+	- Docker CE no Debian		aufs, devicemapper, overlay2 (Debian Strtch), overlay, vfs
+
+	- Docker CE no CenterOS		devicemapper, vfs
+
+	- Docker CE no Fedora		devicemapper, overlay2 Fedora 26 ou later), overlay (experimental), vfs
+
+
+- De acordo com as filesystem disponiveis pode-se determinar o storage drive
+
+
+	
+	Storage driver				Supported backing filesystem
+	-------------------------------------------------------------------------------------------------------
+	overlay, overlay2			ext4, xfs
+	aufs					ext4, xfs
+	devicemapper				direct-lvm
+	btrfs					btrfs
+	zfs					zfs
+
+
+Obs: Quando você muda seu storage driver, qualquer imagem ou container armazenados ficam inacessiveis
+
+
+
+TRABALHANDO COM STORAGE DRIVERS
+---------------------------------------------------------------
+
+Para checar o storage driver em uso
+
+	> docker info | grep "Storage Driver"
+
+		Storage Driver: overlay2
+		  Backing Filesystem: extfs
+		  Supports d_type: true
+		  Native Overley Diff: true
+
+Mudando o storage driver. Para mudar o storage driver devemos nos atentar para a documentação, pois existe uma pagiana para cada tipo
+e tambem uma sequencia de comandos e procedimentos para cada um.
+
+	https://docs.docker.com/storage/storagedriver/overlayfs-driver
+
+
+Vamos supor que queremos mudar de overlay2 para somente overlay, o que não é recomendado para o docker CE. Mas vamos fazer como demonstração
+
+	> sudo systemctl stop docker			-> primeiro vamos parar o docker
+
+	> sudo cp -au /var/lib/docker  $HOME		-> copiar o conteudo da pasta docker para a pasta $HOME, um backup
+
+	> nano /etc/docker/deamon.json			-> adicionar uma entrada de storage driver, que está na segunda linha do arquivo
+							   como o campo "storage-driver"
+	
+		{ 
+		 "insecure-registries": ["192.168.1.129"]
+		 "storage-driver":"overlay"
+		}
+		  	
+	
+	> sudo systemctl start docker			-> Iniciar o serviço do docker novamente
+
+
+	> docker info | grep "Storage Driver"		-> Checando, observamos a mudança
+
+		Storage Driver: overlay2
+		  Backing Filesystem: extfs
+		  Supports d_type: true
+		  Native Overley Diff: true
+
+
+
+
+
+DEVICE MAPPER STORAGE DRIVE
+---------------------------------------------------------------------
+
+- O device mapper storage tem um numero maior de caracteristicas em relação a um overlay2 storage driver
+  Um exemplo destas caracteristicas é que o device mapper usa block based storage, em outras palavras
+  ele usa block device ques são dedicados ao docker, 
+
+- Ele acessa a nivel de block storage level ao inves de file level, desta forma o docker vai poder acessar 
+  dispositivos de armazenamento fisicos que estao conectados ao seu host
+
+- Mas há alguns prerequisitos para usar o storage driver
+
+	* Devicemapper é apenas suportado pelo Docker EE no Red Hat Enterprise Linux (RHEL), Santos OS e Oracle Linux
+
+	* Também é suportado na Commuty Edition CE no Center OS, Fedora, Ubuntu e Debian
+
+
+CONFIGURANDO O DEVICE MAPPER DRIVER
+------------------------------------------------------------------------
+
+1) Parar o docker 
+
+	> sudo systemctl stop docker
+
+2) Registrar uma entrada na configuração do docker deamon em /etc/docker/deamon.json
+
+	> nano /etc/docker/deamon.json
+	
+		{
+		  "storage-driver": "devicemapper"
+		}
+
+3) Reiniciar o docker
+
+	> sudo systemctl start docker
+
+4) Checar o drive
+
+	> docker info | more
+		ou 
+	> docker info | grep "Storage Driver"
+
+
+
+
+Exemplo Pratico
+----------------------------------------------------------
+
+Checar a versão do linux
+
+	> uname -a
+		Ubuntu Server 7.0
+	
+Checar a versão do docker e vamos ver que esse tipo de driver não é suportado por essa versão do ubuntu
+
+	> docker version | grep "Storage Driver"
+		Storage Driver: aufs
+
+
+Lembrando que todas as imagens que estão no host serão afetadas e voce não mais será capaz de usa-las
+
+	> docker images ls
+
+Precisamos antes de mudar o driver rodar um comando save para salvar as imagens e depois de trocar o driver rodar um load para 
+recuperar as imagens
+
+	> docker save
+		"Docker save requires at least 1 argument(s)"
+		See 'docker save --help'.
+
+		Usage: docker save [OPTIONS] IMAGE [IMAGE...]
+
+		Save one or more images to a tar (streamed to STDOUT by default)
+
+Iniciando o processo vamos para o serviço do docker
+
+	> sudo sytemctl stop docker
+
+Vamos editar o arquivo deamon.json
+
+	> nano /etc/docker/deamon.json
+		
+		{
+		"experimental":true
+	    	"storage-driver": "devicemapper"
+		}
+
+Iniciando o docker novamente para ter efeito
+
+	> sudo systemctl docker start
+
+
+
+
+
+VOLUME
+---------------------------------------------------------------------------------------------
+Volumes são o mecanismo preferido para usar com dados persistentes gerados por um docker container.
+Enquanto o bind mount são dependentes da estrutura de diretorios de uma maquina host. Volumes são 
+completamente gerenciaveis pelo docker. Volumes tem várias vantagens sobre bind mount:
+
+	* Volumes sao fácies para fazer backups ou migrar de um bind mount
+
+	* Você pode gerenciar volumes araves do comando docker CLI ou docker API
+
+	* Volumes trabalham tanto em Linux quanto em Windows Containers
+
+	* Volumes permitem que seu armazene volume em hosts remotos ou em cloud providers. 
+	  Para encriptar conteudo de um volume ou adicionar outra funcionalidade
+
+Em adicional, volumes são um melhor escolha que um dados persistentes em um container writable layer. 
+Porque um volume não aumenta o tamanho de um container em uso e o contexto do volume existe fora do 
+lifcycle de um dado container.
+
+		http:/docs.docker.com/storage/volumes
+
+
+
+
+Exemplos
+-----------------------------------------------------------
+
+Checando os volume
+
+	> docker volumes ls
+
+		DRIVER			VOLUME NAME
+		local			66f00da1058...	
+		local 			85750045395...
+		local 			121ce349se9...
+		local 			9cb3b435182...
+		local 			bc927f75baa...
+		local 			ec9740e1041...
+		local 			e92406e10ab...
+		local			help
+		local 			nginx-vol
+		local 			ucp-auth-api-certs
+		local			ucp-auth-store-certs
+		local			ucp-auth-store-data
+		local			ucp-auth-worker-certs
+		local			ucp-auth-worker-data
+		local			ucp-client-root-ca
+		local			ucp-cluster-root-ca
+		local			ucp-controller-client-certs
+		local 			ucp-controller-server-certs
+		local			ucp-kv
+		local			ucp-kv-cents
+		local			ucp-metrics-data
+		local 			ucp-metrics-inventory
+		local			ucp-node-certs
+		local			web-vol
+
+Verificando o comendo volume
+
+	> docker volume
+
+		Usage: docker volume COMMAND
+
+		COMMANDS:
+			create			Create a volume
+			inspect			Display details information on one or more volumes
+			ls			List volumes
+			prune			Remove all unused volumes
+			rm 			Remove on or more volumes
+
+		Run 'docker volume COMMAND --help' for more information on a command
+
+Uma exemplo
+
+	> docker volume web-vol
+	  [	
+		{
+			"Driver": "local",
+			"Labels": null, 
+			"Mountpoint": "/var/lib/docker/volumes/web-vol/_data",
+			"Name": "web-vol", 
+			"Options": {},
+			"Scope": "local"
+		}
+	  ]
+
+Vamos até o diretorio
+
+	> pwd
+	   /home/david
+
+	> cd /var/lib/docker/volumes
+
+
+vamos ver os volumes, podemos perceber que é uma pasta
+
+	> ls -l
+		.
+		.
+		.
+		drwxr-xr-x 3 root root 4096 Apr 29 19:43 web-vol
+		.
+		.
+		.
+
+Vamos entrar no volume igualmente como entramos em uma pasta
+
+	> cd web-vol
+	> ls -lai
+	   798738 drwxr-xr-x 3 root root 4096 Feb 15 01:00 .
+  	   798738 drwxr----- 3 root root 4096 Jun 24 00:11 .
+	   798738 drwxr-xr-x 3 root root 4096 Feb 15 01:00 _data
+
+Temos uma outra pasta _data que vai esta vazia, porque nada está criada nela ainda
+Todos os volumes vao apresentar a mesma estrutura com a mesma pasta _data onde se encontra os dados nela
+
+
+
+Criando um novo volume e rodar um container ao mesmo tempo em um so comando, -d roda como um docker deamon
+--mount source=david-vol é o nome do volume a ser montado
+targer=/app nginx indica onde será montado o volume, no caso dentro do container da aplicação nginx.
+
+	> docker container run -d --mount source=david-vol, targer=/app nginx 
+
+
+Inspecionando o conrainer peo Id que foi criado pelo comando acima
+
+	> docker ps
+		CONTAINER ID	IMAGE ...
+		.
+		.
+		.
+		040e3420307a	nginx ...
+		.
+		.
+		.
+
+	> docker container inspect  040
+
+		"Mounts": [
+		    {
+			"Type": "volumes",
+			"Names": "david-vol",
+			"Source": "/val/lib/docker/volumes/david-vol/_data",
+			"Destination": "/app",
+			"Driver": "local",
+			"Mode": "",
+			"RW": true,
+			"Propagation": ""
+		    }
+		], ...
+
+
+
+
+
+
+
+BIND MOUNTS
+------------------------------------------------------------------------
+
+- Existe ha muito tempo e tem um numero menor de funcionalidades
+
+Usando o comando: 
+
+	> docker run -d -it --name devtest --mount type=bind,source="$(pwd)"/target, target=/app nginx:latest
+
+
+
+Exemplo
+----------------------------------------------
+
+Criando o volume bind mount, o processo é quase o mesmo para volumes, mudando o type=bind
+aqui o comando vai rodar o container e ja criar um bind mount dentro do container.
+A diferença basica entre volumes e bind mounts é que o bind mount voce tem que criar a pasta
+no container que vai ser usado pelo container para montar. Vamos usar a pasta temp
+que com certeza deve ter no linux host.
+ 
+	> docker container tun -d --mount type=bind,source=/temp,target=/app nginx
+
+
+COMPARTILHANDO DADOS ENTRE MAQUINAS
+--------------------------------------------------------------------------------------------------------------
+
+Quando queremos compartilhar dados percistentes entre máquinas, volumes são a recomendação para fazer isso.
+
+https://docs.dockers.com/storage/volume/#share-among-machines
+
+Um exemplo é se você tem multiplas replicas e precisa distribuir arquivos e dados entre host to host
+vamos precisar compartilhar esses arquivos entre eles. E há várias maneiras de fazer isso
+
+	* Você pode fazer sem envolver docker usando Amazon S3 e arzaner seus dados diretamente na nuvem
+	  mas na maioria dos casos vamos usar volume driver
+
+	
+	* Entre as muitas opçõs de volumes drivers que você pode encontrar na documentação do link anterior
+     	  há tambem o volume driver da VM Ware	
+		
+		- https://github.com/vmware/vsphere-storage-for-docker
+
+	* Tambem podemos checar esse novo driver
+
+		https://thenewstack.io/methods-dealing-container-storage
+
+
+
+
+REMOÇÃO
+-------------------------------------------------------------------
+
+Podemos remover o que chamamos de danglin images, que são imagens que não tem nenhuma tag e não foram 
+referenciadas por nenhum container
+
+	> docker images prune
+
+para remover todas as imagens existentes que não são usadas por nenhum container vamos colocar a opçã -a
+Tenha cuidado com esse comando, ele irá remover todas as imagens que tenham pelo menos um container associadas 
+a ela
+
+	> docker image prune -a
+
+
+Para forças a remoção das imagens podemos usar a opção -f ou --force
+
+	> docker image prune -f        
+
+	> docker image prune --force
+
+Podemos aplicar um filtro, por exemplo: aplicar um filtro para localizar todos os container com mais de 24 horas atras.
+
+
+	> docker imager prune -a --filter "until=24"
+
+Quando voce dá uma stop no container, ele não é automaticamente removido, a menos que voce use um --rm. 
+Para ver todos os container em um Docker Host, incluindo os parados. Vamos usar "docker ps -a".
+
+Você pode se surpreender com o numero de container existentes nesse tempo. especialmente no desenvolvimento de sistemas
+Um container parado tem writable layers que ainda consomem espaço em disco. Para limpar esses containers 
+vamos usar:
+
+	> docker container prune
+	
+	WARNING: This will remove all stopped containers.
+	Are you sure you want to continue [Y/N]?
+
+
+tambem podemos remover container que estão rodando com a opção -f ou --force
+
+	> docker container prune -f 
+
+	> docker container prune --force
+
+O mesmo se aplica para usar filtros tambem 
+
+	> docker container prune -a --filter "until=24"
+
+
+VOLUMES
+
+Volumes podem ser usados em um ou mais containers e tomam espaço em disco.
+Volumes nunca são removidos automaticamente. Porque para fazer isso vamos distruir dados
+Podemos usar o comando prune para remover os volumes que não são usados por pelo menos um container
+
+	> docker volume prune
+
+	WARNING: This will remove all volumes not used by at least one volume.
+	Are you sure you want to continue [Y/N]?
+
+
+
+NETWORK
+
+Docker network não pega muito espaço em disco, mas elas são criadas em iptables rules, bridge network device e e entradas routing tables.
+Para limpar as redes. Para limpar as redes que não estão sendo usados por container podemos usar:
+
+	> docker network prune
+
+	WARNING: This will remove all networks not used by at least one volume.
+	Are you sure you want to continue [Y/N]?
+
+Tambem podemos usar as opções -f ou --force e --filter
+
+
+
+LIMPAR TUDO
+----------------------------------------
+
+O comando docker system prune, é um atalho para limpar imagens, 
+container e networks em docker a partir da versão 17.06.0 e mais recentes.
+Volumes tambem podem 
+	
+
+	> docker system prune
+
+	WARNING: This will remove:
+		- all stopped containerss
+		- all networks not used by at least one container
+		- all dangling images
+		- all build cache
+	Are you sure you want to continue [Y/N]?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

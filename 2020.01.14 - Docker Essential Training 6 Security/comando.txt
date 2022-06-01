@@ -1,0 +1,394 @@
+
+DOCKER SECURITY
+----------------------------------------------------
+
+
+
+OPÇÂO
+-----------------------------------------------------
+
+- PLAY WITH DOCKER LAB (Nos labs não tem UCP)
+https://labs-play-with-docker.com
+	
+
+
+INSTALANDO DOCKER
+-----------------------------------------------------
+https://store.docker.com
+
+
+
+SECURIT TYPES
+-----------------------------------------------------
+https://docs.docker.com/engine/security/security
+
+Kernel Namespace
+	- São criados quando o container está rodando
+
+	- Processos de container não podem ver e nem afetar outros processos em seu proprio namespace
+
+	- Cada container tem sua propria network stack
+
+Control Groups
+	- Criado quando o container está rodando
+
+	- Permite account resource e limites
+
+	- Assegura que o container não consuma todos os recursos do host
+
+
+Docker Deamon Attack Surface
+-----------------------------------------------------------
+
+- Attack surface is small, but take appropriate security measures
+
+- Somente roda Docker em um host
+
+- Some permitir trusted users controlar o docker deamon
+
+
+Linux Kernel Capabilities
+----------------------------------------------------------
+
+- Docker roda containers com capacidades restritas
+
+- Para mais exemplos, até OS container não pega os privigios root por completo
+
+
+
+
+Security Docker Swarm
+----------------------------------------------------------
+
+- Muually Authenticated TLS (MTLS)
+  È um multi authenticate 
+
+- Fazer rodizio de certificados e doloroso
+
+- Fazer rodizio de certificados seem downtime é ainda mais dificil
+
+- MTLS é construido no Docker Swarm e resolve esses desafios
+
+- Se você está preocupado que um node esta comprometido, você pode 
+  facilmente rodar docker swarm "ca --totate" para gerar um noveo CA certificate
+
+
+
+DOCKER SWARM
+---------------------------------------------------------
+
+A cada 3 meses docker swarm renova os sertificados
+
+
+
+Maanager vs. Worker
+---------------------------------------------------------
+
+Swarm managers				Swarm workers
+------------------------		---------------------------
+* Matem o clust state			* Sole purpose is to execute container workloads
+
+* Schedule servis			
+
+* Serve as Swarm HTTP API 
+  endpoint
+
+
+Initialinf Key Rotation
+--------------------------------------------------------------
+
+- Se voce está preocupado com o Swarm node está ou não comprometido você pode 
+  facilmente rodar "docker swarm ca --rotate" para gerar um novo CA certificate key
+
+
+
+
+Processo de assinar uma image
+-------------------------------------------------------------
+
+	https://docks.docker.com/engine/seutity/trut/content_trust
+
+
+
+DOCKER CONTAINER TRUST
+==========================
+
+- É importante saber que a imagem que você deseja é a imagem que voce recebe, especialmente quando 
+  puxando imagens da internet em uma organização grande
+
+- Docker Notary é um projeto open-source que provê a habilidade de assinatura digital de conteudo e é tambem 
+  incluido no DTR
+
+- O Docker Notaty enfoça a policy qie qualquer operação com um registry remoto requer em imagens assinadas
+
+
+HABILITAR O CONTENT TRUST
+-----------------------------------
+
+- Enabilitar com o export DOCKER_CONTENT_TRUST=1
+
+- Uma vez o docker trust é habilitado, o docker push vai tentat assinar um imagem
+  e o docker pool somente vai baixar imagens assinadas
+
+- Com o UCP, voce pode assegurar que somente imagen assinadas possam ser rodadas
+
+EXEMPLO:
+
+Examinados as imagens
+
+	> docker image ls
+
+Checar uma imagem, nginx por exemplo, e vamos colocar uma tag por exemplo com o nosso DOCKER TRUSTED REGISTRY SERVER
+
+	> doker tag nginx:latest  193.168.1.179/david/test:signed
+
+Vamos exportar e habilitar o CONTENT TRUST
+
+	> export DOCKER_CONTENT_TRUT=1
+
+Testando o parametro
+
+	> echo DOCKER_CONTENT_TRUST
+		>
+			1
+
+Vamos logar no nosso trusted resgistry server
+
+	> docker login 192.168.1.179/david/teste:signed
+		Loginname:
+		Password:
+
+Vamos tentar fazer um push de uma imagem, mas vamos notar que pode acontecer um error, devido ao fato de que
+ainda não temos um certificado nas imagens
+
+	> docker push 192.168.1.179/david/test:signed
+		->
+		  Error: error contacting notary server: x509: certificates signed by unlnown authority
+
+
+Como não temos imagens assinadas esse erro vai persistir, para voltar ao normal, basta desativar o CONTENT TRUST
+
+	> export DOCKER_CONTENT_TRUST=0
+
+Vamos da um push na imagem novamente e vamos verificar que vai rodar tranquilamente
+
+	> docker pull 192.168.1.179/david/test:signed
+
+
+
+DOCKER ACCESS CONTROL MODEL
+------------------------------------------------
+
+1. Subject
+
+2. Role
+
+3. Resources
+
+4. Grants
+
+
+
+SUBJECTS
+--------------------------------------------------
+
+Exemplos de subjects
+
+	* User	
+
+	* Team 
+
+	* Project
+
+	* Servis Account
+
+		+ Subects are granted roles
+
+
+ROLES
+------------------------------------------------
+
+Uma Role define o que pode ser feito
+
+	* View only
+
+	* Restricted control
+
+	* Full control
+
+
+RESOURCES SETS
+--------------------------------------------------
+
+Resources Sets poder ser 
+
+	* Swarm collections
+
+		+ Swarms collections são feitos de coisas tais como container, networks, services, secrets and volume
+
+	* Kubernets Namespaces
+		
+		+ Kubernets namespaces são feitos de conceitos similares pods, deployments, networks polices, nodes, sevices, secrets e mais...
+
+	* Collections e namespaces juntos são chamados resources sets
+
+
+GRANTS
+-------------------------------------------------
+
+- Grants são a combinação de um subject, role e resource set
+
+- Grants são um 'ACL' de um Docker Universal Control Plane
+
+
+
+CLIENTE CERTIFICATES AND CLIENT BUNDLE
+-----------------------------------------------
+
+
+	https://Inkd.in/gkd28Mm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

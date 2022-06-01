@@ -1,0 +1,84 @@
+
+
+Entrando na maquina EC2 cluster
+
+	> ssh -i ~/.ssh/id_rsa ec2-user@18.217.0.45
+
+Rodando como root
+
+	> sudo su -
+
+Examinando os container
+
+	> docker ps
+
+	CONTAINER ID		IMAGE				COMMAND		CREATED			STATUS		PORTS
+	42e8e0e90c08		amazon/amazon-ecs-agent:latest	"/agent"	31 minutes ago		Up 31 minutes	
+
+
+Temos um container rodadndo como agente na EC2, para fazer o login nele ecs-agent e sh para rodar como shell
+
+	> docker exec -it ecs-agent sh
+
+Se não tiver ambiente shell "sh", vamos criar um container para usar como recurso, um linux alpine.
+
+
+	> docker run --rm --name linux  -it alpine:latest sh
+	/ #   									-> para sair CTRL+D
+
+
+
+UPDATE HOST NAME SCRIPT
+--------------------------------------------------------
+
+
+Vamos no terminal checar os arquivos
+
+	> ls
+
+		Shared_volumes.txt	hostname.sh
+
+Vamos ver o conteudo do arquivo hostname.sh
+
+		hostname.sh
+		-----------------------------------------------------------------------------------------------------------
+		#!/bin/sh
+
+		HOSTNAME=`hostname`
+		VERSION=${VERSION:-v1}
+		cat > /usr/share/nginx/html/index.html <<EOF
+		<HTML>
+		<HEAD>
+		<TITLE>This page is on $HOSTNAME and is version $VERSION</TITLE>
+		</HEAD><BODY>
+		<H1>THIS IS HOST $HOSTNAME</H1>
+		<H2>And we're running version: $VERSION</H2>
+		</BODY>
+		</HTML>
+		EOF
+
+		mkdir /usr/share/nginx/html/healthz /usr/share/nginx/html/hostname /usr/share/nginx/html/version
+		cat >> /usr/share/nginx/html/hostname/index.html <<EOF
+		$HOSTNAME -- $VERSION
+	
+		EOF
+		cat > /usr/share/nginx/html/version/index.html <<EOF
+		$VERSION
+		EOF
+		chmod 777 /usr/share/nginx/html/healthz
+		cat > /usr/share/nginx/html/healthz/index.html <<EOF
+		healthy
+		EOF
+
+		nginx -g "daemon off;"
+		--------------------------------------------------------------------------------------------------------------
+
+
+Vamos copiar este arquivo para o repositorio gir criado anteriormente nos videos anteriores
+
+	> cp hostname.sh ../hostname/
+	> cd ../hostname
+	> git status
+	> git commit -am 'Updated hostname.sh'
+	> git push
+

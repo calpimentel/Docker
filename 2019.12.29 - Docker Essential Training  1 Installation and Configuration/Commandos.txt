@@ -1,0 +1,698 @@
+
+
+
+VIRTUAL MACHINE
+---------------------------------------------------------------------
+
+apt-get update
+apt-get install lightdm
+
+
+para entrar no modo comando
+CTRL+F1   -> Control Direito
+
+Xubunto Minimal
+
+
+
+COMUNICAR A VIRTUAL MACHINE COM O LOCAL COMPUTER
+
+	> sudu apt-get install openssh-server
+
+
+Apos instalaçao pegao IP address
+
+	> ip addr
+
+Apos pegar o IP, conectar em um terminal local, ir no terminal local
+e conectar com o usuario
+
+	> ssh david@172.16.31.35
+
+
+
+
+
+
+INSTALANDO DOCKER
+-----------------------------------------------------------------
+
+- O dimensão do hardware tambén varia dependendo da carga usada
+
+- For Universal COntrol Plane (UCP) 
+  and Docker Trusted Registry (DTR), Docker offers specific 
+  guidlines that you should be aware of, and says that all 
+  production servers and nodes should meet these requiremente
+  
+
+- Windows Container Image é maior que Linux Container Images
+
+
+Docker Engine?
+------------------------------------------------------------------
+- É o coração do Docker
+
+- Docker engine é projetada como Server Cliente application 
+  para fazer 3 caoisas distintas:
+
+	* 1 - Dockerd (server): é inicializado quando se instala o docker, é o proprio server
+
+	* 2 - REST API : Com a instalação do Docker Server, você recebe o docker API
+  			 defini as regras para o sistema falar com o server
+
+	* 3 - Docker CLI: Basicamente essa é a parte cliente que é usada para rodar comandos
+                          e falar com o servidor
+
+
+
+Arquitetura do Docker 
+------------------------------------------------------------------
+
+Docker deamon: O docker deamon é instalado no docker host. O 
+	       E esse docker Host, pode ser um servidor, seu desktop,
+	       Um data center, virtual machine, cloud etc..
+	       
+
+	Containers:
+
+	Images: 
+
+DOCKER_HOST: A partir da instalação do docker deamon o DOCKER_HOST é usado 
+  	     para executar e instanciar os nossos Container e Images
+
+
+Registry: Repositoro de Imagens
+
+
+Client: É onde podemos administrar através de comandos os container e imagens
+	O Docker Cliente pode está no mesmo local do DoCKER_HOST ou
+  	pode tambem adminstrar remotamente o DOCKER_HOST
+	
+	Por meio do DOcker Client podemos pegar imagens do Registry
+	e rodar no DOCKER_HOST
+
+        
+NODES = HOSTS. Tambem podemos chamar os hosts de nodes
+
+
+
+
+
+
+
+DOCKER UNIVERSAL CONTROL PLANE
+--------------------------------------------------------------------
+
+- Docker Enterprise Edition (Docker EE), prove um forma de controlar centenas
+  ou milhares de container e imagens
+
+- E para esse tipo de scale o Docker Enterprise inclue o 
+  Docker Universal Control Plane (UCP) e o 
+  Docker Trusterd Registry (DTR)
+
+- Diagrama;
+
+
+  DOCKER TRUSTED REGISTRY: It is on-site on-premises for centralized storage for all 
+			   your containers
+
+  APPLICATION: Your applications
+ 
+
+  Universal Control Plane: No topo do Docker EE, O UCP invclue os serviços abaixo e 
+			   tambem a habilidade de controlar todos os seus containers 
+			   como serviços e staks:
+			
+			* Private Image Registry
+			* Security access and user management
+			* Application and cluster management
+			* Image security scanning and continous monitoring
+			* Content trust and verification
+			* Policy management: 
+				+ Centralized Police managemente serives for your containers
+
+
+  Docker EE: Essa camada é onde se encontra o Docker EE, aqui estão 
+	     Docker Orchrestation, docker volume e Security
+
+		     Security                   Security         Security
+
+		 Distributed state         Distributed state  Distributed state
+
+
+
+  DOCKER_SERVERS: Nessa camada vamos encontrar os mais variados tipos de hosts
+           
+			Cloud Severs	    Virtual servers     Physical servers
+
+
+
+
+
+
+DTR CONSIDERATIONS: 
+--------------------
+
+	- DTR is a enterprise grate solution from Docker.
+
+	- It's installed on-premises ou cloud solution 
+
+	- It's work with Universal Control Plane
+
+	- It Allows secure and store so that you can easily
+	  track and manage your applications as they move from 
+	  test into production
+
+
+
+ 
+DOCKER Namespaces
+-----------------------------------------------------------------
+	DOcker Host running Docker Engine
+	---------------------------------
+	- The kernel resouces such as, process Id, network, storage and ineternal process 
+	  communication IPC, can all virtualize and share between Host operation system
+	  and the containers running on top
+
+	Docker Namespace
+	---------------------------------
+	- Isaolete what is happening in the runing container from the operation system 
+	  that those containers are running on
+
+	- Types of namespaces in use by Docker
+
+		* Process
+
+		* Mount
+
+		* IPC
+
+		* Network
+
+		* User
+
+	
+Exemplo:
+--------------------------------
+
+1) Verificar os processos e ips, vamos encontras varios ips e redes
+
+	> ps -ef
+	> ip addr
+	
+2) Agora rodando um container e executar container e rodar nele os mesmos processos e ips
+   isso porque estão isoladas em namespaces
+
+	> docker run -it alpine /bash/sh
+
+	> ps -ef
+	> ip addr
+
+
+	
+
+
+CGROUPS
+---------------------------------------------------------------------------------
+
+- In general, cgroups can be used to control a varity of resources, but in Docker, 
+  the most common users are for container are:
+
+	* CPU limits
+
+	* CPU reservations
+
+	* Memory limits
+
+	Note that to use cgroups in Docker, there are strict Kernel requirements
+
+Command Options for Docker
+
+	-c, --cpu-shares int		-> CPU shares (relative weight)
+	    --cpus decimal		-> Numbers of CPUs
+	    --cpuset-cups string	-> CPUs in which to allow execution (0-3, 0,1)
+	    --cpuset-mems string	-> MEMs in which to allow execution (0-3, 0,1)
+
+	-m, --memory bytes		-> Memory limit
+	    --memory-reservation bytes	-> Memory soft limit
+	    --memory-swap bytes 	-> Swap limit equal to memory plus swap: '-1' to 
+ 					   enable unlimeted swap Tune container memory swappiness (0 a 1) (default)
+dicker
+
+
+
+INSTALANDO O DOCKER
+-----------------------------------------------------------------------------------------------
+
+Remover instalações prêvias
+
+	> apt-get remove docker docker-engine docker.io
+
+Atualizando os pacotes do linux
+
+	> apt-get update
+
+Instalar pacotes que permitem o uso de HTTPS
+
+	> apt-get install apt-transport-https ca-certificates curl software-properties-common
+
+
+Adicionando o Docker GPG Key Official
+
+	> curl -fsSL https://download.docker.com/linux/ubuntu/gpg  |  sudo apt-key add -
+
+Adicionar o docker repository
+
+	> sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+
+
+Atualizar novamente para os pacotes docker entrarem na lista de atualização
+
+	> sudo apt-ger update
+
+Instalando o docker ce
+
+	> apt-get install docker-ce
+
+Cheando a versão para ver se o docker foi instalado
+
+	> sudo docker version
+
+
+
+
+
+DOCKER GROUP
+-----------------------------------------------------------------
+
+Adicionando o grupo docker
+
+	> sudo groupadd docker
+
+Adicionando o seu usuario logado ao grupo docker, isso vai fazer com que você nao precise mais
+iniciar os comandos com sudo ...
+
+	> sudo usermosde -aG docker $USER
+
+	Obs.:Para o comando ter efeiro, será necessário logout e login
+
+
+
+DOKER LABS
+----------------------------------------------------------
+
+https://labs.play-with-docker.com
+
+
+DOCKER VOLUMES
+-----------------------------------------------------------
+
+Para ver o tipo de storage do docker
+
+	> docker info | more
+
+		-> Server version: 17.12.0-ce
+		   Storage Drive: overlay2
+		     Backing Filesystem: extfs
+		     Supports d_types: true
+		     Native Overlay Diff: true
+			.
+			.
+			.
+
+DOCKER HUB
+------------------------------------------------------------
+é um tipo de repositorio publico, funciona tambem como um registry para imagens
+
+Logando no docker Hub
+
+	> docker login
+		--> Username:_
+		    Password:
+
+
+Puxando uma imagem do doc hub, chamada alpine que é uma versao pequena do linux
+
+	> docker pull alpine
+
+Checando a imagem puxada do docker hub
+
+	> docker images
+
+		--> 
+			REPOSITORY	TAG	IMAGE ID	CREATE		SIZE
+			alpine		latest	3fd9065eaf02	5weaks ago	4.15MB
+
+Colocar uma tag no alpine apenas referenciando o ID com os 3 primeiros caracteres, 
+a tag será o nome do DockerHub Id + o nome da imagem + tag, 
+sera feito o processo de tag 3x
+
+	> docker tag 3fd calpimentel/alpine:linkedin1
+	> docker tag 3fd calpimentel/alpine:linkedin2
+	> docker tag 3fd calpimentel/alpine:linkedin3
+
+Vendo novamente as imagens podemos observar que vai existir 3 imagens com tags diferentes e mesmo Id
+e continua lá a imagem com a tag original
+
+	> docker images
+		-->
+			REPOSITORY	TAG		IMAGE ID	CREATE		SIZE
+			alpine		linkedin1	3fd9065eaf02	5weaks ago	4.15MB
+			alpine		linkedin2	3fd9065eaf02	5weaks ago	4.15MB
+			alpine		linkedin3	3fd9065eaf02	5weaks ago	4.15MB
+			alpine		latest		3fd9065eaf02	5weaks ago	4.15MB
+
+Jogando a mesma imagem para o Docker Hub, isso vai dizer que a imagem ja existe, mas mesmo assim a imagem é 
+inserida no repositorio com 3 diferentes tags
+
+	> docker push calpimentel/alpine
+
+Vamos agora tentar apagar a imagem, podemos fazer isso tambem com apenas os 3 primeiros digitos do ID da 
+imagem, mas voce vai notar que pelo fato de existir mais uma imagem com tags diferentes o comando não 
+aceita apagar
+
+	> docker iamge rm 3fd
+
+Para forçar a deleção da imagem, vamos repetir o comando com o atributo -f que força a deleção
+
+	> docker image rm 3fd -f
+	> docker images
+
+Agora que apagamos a imagem, estamos hapitos a puxar a imagem do docker hub novamente apenas por uma tag
+
+	> docker pull calpimentel/alpine:linkedin1
+
+
+
+
+Docker Swarm
+--------------------------------------------------------------
+
+Docker Sworm é um caracteristica do orchrestation manager
+Esta disponivel tanto no Docker EE quant CE e está disponivel em todas as plataformas
+
+- Work Nod: é onde as aplicações em container funcionam
+
+- Sworm Manager Nodes: Assegura a High Availability, orchestation e que o Universal Control Plane esteja 
+  sempre disponível.
+
+
+
+CONFIGURANDO DOCKER PARA INICIAR NO BOOT
+--------------------------------------------------------------
+
+1) Checar o status do docker
+
+	> systemctl status docker
+
+2) Para desativar o Docker ativar no boot
+
+	> sudo systemctl disable docker
+
+3) Para ativar o Docker iniciar no boot
+
+	> sudo systemctl enable docker
+
+
+
+
+BACKUP DOCKER
+--------------------------------------------------------------
+No docker EE é preciso criar backups individuais para cada
+um dos seguintes componente:
+
+	* Docker swarm: Backup do Swarm Resources estais como service e network definitions
+	* UNiversal Control Plane (UCP): Backup da UCP configurations
+	* Docker Trusted Registry(DTR): Backup da DTR configurations and Images
+	* Container volume Data: por ultimo o local onde estão armazenados os dados
+
+1) Backup do Swarm
+
+	O Docker Manager Node armazena o Swarm state e Manager logs em /var/lib/docker/swarm/
+	nas versçoes acima de 1.13 estes dados incluem a key usada para encriptar o Ralf Logs.
+	Sem essas Keys não é possivel restaurar o swarm
+
+	Processo de Backup do Swarm
+	1) Parar o docker
+
+		> systemcrl stop docker
+
+	2) Ir para a pasta do Swarm
+
+		> cd /var/lib/docker
+		> ls -l
+
+	3) Dentro do caminho acima vamos encontrar a pasta swarm, em seguida vamos copia recursivamente para uma pasta temp
+
+		> cp -R swarm /temp
+
+
+	4) Reiniciar o serviço depois da copia
+
+		> systemcrl start docker
+
+2) Backup do Universal Control Plane
+
+	1) Criar um backup e armazenas em /temp/backup.tar
+
+		> docker container run --log-driver none --rm -i --name ucp -v /var/run/docker.sock:/var/run/docker.sock   \
+                         docker/ucp:2.2.5 backup --interactive > /temp/backup.tar
+
+	2) Backup do Docker Trust Registry (DTR)
+
+		https://docs.docker.com/ee/admin/backup/back-up-dtr/
+
+
+
+INSTALANDO DOCKER TRUSTED REGISTRY
+--------------------------------------------------------------------------------------
+
+Puxando a ultima versão do DTR
+
+	> docker pull docker/dtr:2.4.2
+
+Instalação do DTR
+
+	> docker run -it --rm docker/dtr:2.3.2 install --ucp-node <ucp-node-name> --ucp-insecure-tls
+
+		Obs.: Vai perguntar o endeço do Universal COntrol Plane
+
+
+
+
+
+COMANDOS DOCKER
+------------------------------------------------------------------------
+Checar status
+
+	> socker version
+
+Informações mais detalhadas
+
+	> docker info
+
+Mostra os containers ativos
+
+	> docker ps
+
+Mostra todos os containers, inclusive os que falharam e estçao desativados
+	> docker ps -a
+
+Olhando o status do docker swarm cluster
+
+	> docker node ls
+
+
+
+CONFIGURANDO DOCKER LOGGIN
+--------------------------------------------------------------------------------------------
+Ha tres diferentes locais para registrar log em mecanismos de logs e eles coletam dados e informações
+de containers e serviços ativos e rodando. Esses mecanismos são chamados de logging drivers.
+
+- Casa Docker Deanon tem um default loggin driver o qual cada container usa, mas voce pode criar outros
+  caso queira configurar seu proprio logging driver.
+
+- Voce pode recorrer ao uso de logging drivers incluidos no Docker, mas tamvem pode implementar e usar 
+  logging drivers plugins. Logging drivers plugins estão disponiveis a partir da versão do Docker 17.05.
+
+
+Avaliando o log
+
+	> docker info | grep 'Logging Driver'
+		=>
+			Logging Driver: json-file
+			WARNING: No swap limit support
+
+Para mudar o default logging type, 
+
+
+	1) Esta como root
+	
+		> sudo -i
+	
+	2) Ir no var
+	
+		> cd /etc/docker
+		> ls -lai
+
+
+	3) criar um arquivo chamado deamon.json
+
+
+
+
+Para ver log para um container especifico
+
+	> docker logs
+
+Tambem podemos especificar o container por apenas as 3 primeiras letras do id
+
+	> docker logs 1af
+
+Para especificar um arquivo de log diferente em seu docker server
+--log-driver=syslog  nome do arquivo de log
+--log-opt syslog-address=udp://1.1.1.1 endereço
+
+	> docker run --log-driver=syslog  --log-opt syslog-address=udp://1.1.1.1 alpine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	  
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

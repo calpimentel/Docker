@@ -1,0 +1,1354 @@
+
+
+Criar Id no site docker
+------------------------------------------
+id.docker.com
+
+
+Instalando docker no Linux Ubunto
+------------------------------------------
+
+1) Checar se o sistema tem as dependencias atualizadas
+
+	> sudo apt-get update
+
+2) Instalar pacotes para permitir apt usar um repositorio sobre HTTPS:
+
+	> sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu  $(lsb_release -cs)  stable" 
+
+
+ 
+3) Adicionar a Key oficial do Docker
+
+	> curl  -fsSL  https://download.docker.com/linux/ubuntu/gpg  | sudo apt-key add -
+
+
+4) Adicionar um repositorio estavel. Detecta a versão do sistema e dispacha os pacotes necessários
+	> sudo 	add-apt-repository  "deb [arch=adm64] https://download.docker.com/linux/ubuntu 	$(lsb_release -cs) 	\
+		"stable"
+
+5) Atualizar as dependencias novamente
+
+	> sudo apt-get update		
+
+6) Instalar o docker
+
+	> sudo apt-get install docker-ce
+
+7) Criar um grupo de usuarios, para da acesso para rodar os comandos (ok,se ja existe)
+
+	> sudo groupadd docker
+
+9) adicionando o usuario ativo ao grupo docker
+sudo
+	> sudo usermode -aG docker $USER 
+
+
+10) Para fazer com que as mudanças no grupo docker tenham efeito, basta logout do terminal e depois login
+
+	> ps -ef
+
+11) Iniciando um container chamado Hello-World
+
+	> docker run hello-world
+
+
+
+
+COMANDOS
+------------------------------------------------------
+1) Olhando as imagens docker
+
+	> docker images
+
+2) Criando e rodando uma imagem do ubuntu rodando bash (-ti = terminal interactive)
+
+	> docker run -ti ubuntu:latest bash
+
+	obs.: para sair da imagem, digite exit ou CTRL + D
+
+
+3) para ver o processo da imagem
+
+	> docker ps
+
+4) mesmo comando acima, com visualização vertical
+
+	> docker ps -format $FORMAT
+
+5) Parando o container (-a = all)
+
+	> docker ps -a
+
+6) Ver o ultimo container rodando
+
+	> docker ps -l
+		ou
+	> docker ps -l --format=$FORMAT
+
+
+
+
+-----------------------------------------------------------
+docker run = Roda o container a partir da imagem
+docker commit = adiciona o container rodando a imagem
+-----------------------------------------------------------
+
+Exemplo
+-------------------------------------------------
+1) Rodando o container ultima versão em bash
+
+	> docker run -ti ubuntu bash
+
+2) Criando um arquivo no container rodando
+
+	> touch MY-IMPORTANT-FILE
+
+3) sair do container e pegar o id do container
+
+	> docker ps -l
+
+4) criar uma imagem a partir do ID do container
+
+	> docker commit d1252f52309f 
+	
+	obs.: Isso gerou outro container, mas com um id muito grande
+		sha256:a9f7546b2b9afea5c76aadfc2095bee9573652d2540cd238c5a025fa8c46e981
+
+5) trocar o id por outro nome (lembrar de pegar o id depois dos dois pontos)
+
+	> docker tag a9f7546b2b9afea5c76aadfc2095bee9573652d2540cd238c5a025fa8c46e981 my-image
+	> docker ps -l
+
+	obs:vamos observar que mais uma imagem foi criada
+
+6) Ao rodar veremos a alteração feita, com o novo arquivo na nova imagem
+
+	> docker run -ti my-image bash
+
+
+
+
+
+
+Fazendo copia do container que esta rodadando
+-------------------------------------------------
+1) Pegar o nome do container roadando
+
+	> docker ps -l 
+
+2) FAZER A COPIA a partir do nome da imagem
+
+	> docker commit hungry_mana my-new-image
+
+doc
+
+
+
+
+
+
+RODAR COISAS NO DOCKER
+--------------------------------------------------
+
+1) Rodar e deletar o container quando sair
+
+	> docker run --rm -ti ubuntu 
+
+2) faz o mesmo, mas fica por 3minutos e sai
+
+	> docker run --rm -ti ubuntu sleep 5
+
+3) Usando o bash, inicia o container e apos 3 segundos solra um echo
+
+	> docker run -ti ubuntu bash -c "sleep 3; echo all done"
+
+4) Desanexando um container
+
+	> docker ps
+
+5) Anexado-se a um outro container, 
+   deixando o container atuala rodando
+
+	> docker attach container_name
+
+6) Desanexar e deixar o container rodando
+
+	CTRL + P, CTRL + Q	 
+
+7) Outra maneira de deixar o container rodando e 
+   desafixar dele (-d)
+
+	> docker run -d -ti ubuntu bash
+
+8)  
+
+	>
+
+
+
+DOCKER EXE
+----------------------------------------------------------
+
+1) Adicionar um novo processo ao container suspicous_willian 
+
+	> docker exec -ti suspicous_willian bash
+
+
+LOGS
+=--------------------------------------------------------
+
+Olhar o resultado do container em logs
+
+	> docker log suspicous_willian bash
+
+
+MATANDO O PROCESSO DO CONTAINER
+---------------------------------------------------------
+
+Matando o container pelo nome ou ID
+
+	> docker kill suspicous_willian bash
+
+	
+
+REMOVENDO O CONTAINER
+---------------------------------------------------------
+
+
+	> docker rm suspicous_willian bash
+
+
+PONDO LIMITES NO CONTAINER
+---------------------------------------------------------
+
+Memoria
+
+	> docker run --memory <maximum-allowed-memory>
+
+Limite de CPU
+
+	> docker run --cpu-shares <relatives to other containers>
+
+Limite de Hardware cpu em percentuais
+
+	> docker run --cpu-quoya <to limit in general>
+
+
+
+
+NETWORK: PORTS
+=============================================================
+
+Rodando o container e reover quando terminar
+publicando a porta internamente (-p) -p 45678 internamente
+e externamente tambem com o mesmo numero 45678:45678
+tambem publicando uma segunda porta, com o mesmo numero 
+internamente -p 45678:45678 e externamente com outro
+
+Na clasula name, vamos dá um nome ao container ao invés, do 
+docker escolher um
+
+
+	> docker run --rm --ti -p 45678:45678 -p 45679:45679 --name echo-server ubuntu:14;.04 bash
+ 
+
+Apos criardo o servidor 
+em outro terminal podemos ouvir pelas portas
+com o comando netcat
+
+
+Exemplo
+1) Rodamos o comando na com -lp(listen port), na porta 45678
+depois redirecionamos para a porta 45679
+
+	> nc -lp 45678 | nc -lp 45679
+
+2) Em um segundo terminal iniciar o container e
+   indicar a porta interna do container
+
+	> docker run --rm -ti ununtu:14.0 bash
+
+  	> cn host.docker.internal 45678
+
+3) Em um segundo terminal iniciar o container e
+   indicar em outra porta interna do container 
+
+	> docker run --rm -ti ununtu:14.0 bash
+
+  	> cn host.docker.internal 45679
+ 
+	Obs: se nowindows ou inves de host.docker.internal 
+	colocar o ip da maquina
+
+
+4) Um outra forma é criar as duas portas e direcioná-las
+
+	> docker run -rm -ti -p 45678 -p 45679 -name echo-server ubuntu:14.0 bash
+
+	> nc -lp 45678  | nc -lp 45679
+
+	//Testando as portas
+
+	> docker port echo-server
+		->  0.0.0.0:32777
+		->  0.0.0.0:32776
+
+	//Definir o localHost em um terminal
+	nc localhost 32777
+	
+	
+	//Definir o localHost em outro terminal
+	nc localhost 32776
+
+
+
+PUBLICANDO A PORTA
+-----------------------------------------------------------
+
+Iniciando o container. com apenas a porta interna com protocolo udp
+
+	> docker run -rm -ti -p 45678/udp -name echo-server ubuntu:14.0 bash
+
+
+
+
+
+
+CRIANDO NETWORKD PARA CONTAINERS
+-----------------------------------------------------------
+
+Vendo as redes
+
+	> docker network ls
+		
+		bridge		= rede padrão para os containers
+		host		= sem isolamento de redes
+		none	 	= sem rede
+
+Criando a rede
+
+	> docker network create learning 
+
+colocando uma maquina na rede criada
+
+	> docker run --rm -ti --net learning --name catserver ubuntu:14.04 bash
+
+
+
+
+			
+criando uma nova rede e conectando o catserver
+
+	> docker network create catsonly
+	> docker network connect catsonly catserver
+
+	obs: em um outro terminal
+
+	> docker run --rm -ti --net catsonly --name bobcatserver ubuntu:14.04 bash
+
+
+
+
+
+
+
+ENVIROMENT VARIABLE
+---------------------------------------------------------------------
+
+Rodando um container com uma variavel de ambiente (-e)
+
+	> docker run -rm -ti -e SECRTETE=theinternetlovescats  --name catserver ubuntu:14.04 bash
+
+	> nc -lp 1234
+
+
+Em outro terminal ou cliente, conectando com o catserver (-link)
+
+	> docker run --rm -ti --link carserver --name dogserver ubuntu:14.04 bash
+
+	> nc catserver 1234
+
+
+
+
+DOCKER COMMIT
+-------------------------------------------------------------------
+Obs.: O comando commit ja possibilita colocar uma tag
+
+	Sintaxe:
+
+	docker commit id name:
+
+	Estrutura do name:
+	refistry.example.com:pot/organization/image-name:version-tag
+
+
+
+Limpando imagens
+-------------------------------------------------------------------
+
+Apagar imagens do sistema
+
+	docker rmi image-name:tag
+		ou
+	docker rmi image-id
+
+
+
+
+
+
+
+COMPARTILHANDO ARQUIVOS
+--------------------------
+
+	Volumes: Virtual disks to store and shere data:
+		- Persistent
+		- Ephemeral
+
+	
+	volumes-from: shares discs that existes only as lonh as they are being used
+
+
+
+COMPARTILHANDO ARQUIVO EM CONTAINER
+--------------------------------------------------------------
+
+1) Criar uma pasta exemple
+
+	> mkdir exemple
+	> pwd
+
+2) Iniciar um container, com -v especificando todo o caminho do folder:nome do volume
+
+	> docker -ti -v /Users/calpimentel/exemple:/shared-folder ubuntu bash
+
+
+3) QUando o container estiver rodando, especificar um arquivo
+
+	># ls /shared-folder
+	># touch /shared-folder/my-data
+	># ls /shared-folder]
+	># exit
+
+
+
+
+
+
+
+
+CRIANDO UM SHARED FOLDER
+---------------------------------------------------------------------------
+
+1) Criando um container que não é compartilhado com o host
+
+	> docker run -ti -v /shared-data  ubuntu bash
+
+2) Colocando dados
+
+	> docker run -ti -v /shared-data ubuntu bash
+	># echo hello > /shared-data/data-file
+
+
+3) EM outro terminal/client, iniciar outro container, e especificar o nome da maquina ao
+   qual se quer usar o volume compartilhado (--volume-from nome-container)
+
+	> docker run -ti --volumes-from sick_hooper ubuntu bash
+	># echo hello > /shared-data/data-file2
+	
+4) No terminal anterior vamos sair do container, mas vamos notar que os dados continuam 
+   no volume compartilhado
+
+	># exit
+
+5) No segundo volume
+
+	># ls -la
+
+6) Criando agora em um terceiro terminal/cliente com o volume do segundo terminal
+
+	> docker run -ti --volumes-from adoring_lumiere ubuntu bash
+	># ls -la
+
+	obs.: vamos observar que os dados vao continuar até a ultimo container que o 
+	      compartilha for derrubado
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DOCKER FILES
+------------------------------------------------------------
+
+ - What is a DockerFile?
+
+	* This is a small "program" to create an image
+	* You run this program with:
+
+		> docker build -t name-of-result .     <--- Note the dot "." here
+
+
+	* When it finishes, the result will be in your local docker registry
+
+	* Each line takes the images from the previous line and makes another image
+
+	* The previous images is unchanged
+
+	* It does not edit the state from the previous line
+
+	* You don't want large files to span lines or your images will be huge
+
+	* This is important; watch the build output for "using cache"
+
+	* Docker skips lines that have not changed since the last build
+
+	* If yout first line is "download lastes file, "  it may not always run
+
+	* This cache saves huge amounts of lines
+
+	* The parts that changes the most belong at the end of Dockerfile
+
+	* Dockerfile look like shell scripts
+	
+	* Dockerfile are not shell scripts
+
+	* Process you start on one line will not be running on the next line
+
+	* Environment variables you set will be set on the next line
+		
+		if you use the EMV command, remember thar each line is its
+		own call to docker run
+
+
+MAKING A DOCKER FILES
+------------------------------------------------------------
+
+
+	COMMAND: 
+		Dockerfile 
+			FROM  busybox
+			RUN   echo "building simple docker image."
+			CMD echo "Hello Container"
+
+
+
+1) Criar um diretorio para por o exemplo
+
+	> mkdir example
+
+	> cd example
+	
+	> ls
+
+2) Criar o docker file
+
+	> nano Dockerfile
+
+	+===============================================================
+
+		FROM busybox						-> especify what image we beging with
+		RUN  echo "buildinf simple docker image."		-> cria um container e e neste container rodar o comando
+		CMD  echo "hello Container."				-> quando o container iniciar executar a instrução
+
+
+3) Depois de salvo o Dockerfile, vamos cria-lo com o comando build, e os passos vao ser introduzidos
+   pelo arquivo Dockerfile para criar o contaiener hello
+
+	> docker build -t hello .
+
+
+4) Roda o container para ver se funcionou
+
+	> docker run --rm hello
+
+
+
+
+
+
+
+
+
+MAKING A DOCKER FILES para por coisas no container
+------------------------------------------------------------
+
+
+1) Criar um diretorio para por o exemplo
+
+	> mkdir example2
+
+	> cd example2
+	
+	> ls
+
+2) Criar o docker file
+
+	> nano Dockerfile
+
+	+===============================================================
+
+		FROM debian:sid					--> Rodando do container debian
+		RUN  apt-get -y update				--> Instalando pacotes com -y para não fazer perguntas
+		RUN  apt-get install nano			--> Instalando o nano
+		CMD  ["/bin/nano", "/tmp/notes"]		--> ROdando o nano na pas bin criando o arvivo notes em tmp
+
+
+3) Depois de salvo o Dockerfile, vamos cria-lo com o comando build, e os passos vao ser introduzidos
+   pelo arquivo Dockerfile para criar o contaiener hello
+
+	> docker build -t exemple2/nanoer .
+
+
+4) Roda o container para ver se funcionou, se tudo ocorrer bem ao rodar o container
+   voce ja vai cair no nano para editar o arquivo no nano
+
+	> docker run --rm -ti exemple2/nanoer
+
+
+5) Outro exemplo mais interessante, iniciando do mesmo container que paramos e adicionando mais 
+   conteudo a ele
+
+	
+	> nano Dockerfile
+
+	+===============================================================
+
+		FROM exemple2/nanoer				--> Rodando no mesmo container 
+		ADD  notes.txt /notes.txt			--> Adicionar um arquivo novo chamado notes.txt, que ja deve está pré criado
+		CMD  ["/bin/nano", "/notes.txt"]
+
+ 5.1) Criando o arquivo notes.txt e pondo conteudo
+
+	> nano notes.txt
+
+ 5.2) Rodando
+
+	> docker build -t exemple2/notes .
+	> docker run --rm -ti exemple2/notes 
+
+
+COMANDOS
+========================================================
+
+RUN 
+  - Runs commands line, waits for it to finish, and saves the results
+
+  	> RUN unzip install.zip /opt/install
+
+
+ADD 
+
+  - Usado para adicionar local file
+
+	> ADD run.sh  /run.sh
+
+  - Adiciona conteudo ao arquivo, automaticamente descomprimindo na pasta
+
+	> ADD project.tar.gz /install/
+
+  - Fazendo o download de URL para a pasta
+
+	> ADD https://project.exemple.com/download/1.0/project.rpm  /project/
+
+
+ENV
+  - Sets environment variables
+  - Both during the build and when running the result
+
+  ENV DB_HOST=db.production.exemple.com
+  ENV PORT=1234
+
+
+ENTRYPOINT
+
+  - Especifies the start od the command to run
+
+  - CMD specifies the whole command to run
+
+  - if you have both ENTRYPOINT and CMD, they are combined together
+
+  - if your container acts like a command-line program, you can use ENTRYPOINT
+
+  - If you are unsure you can use CMD
+
+
+  Shell Form vs. Exec Form
+
+  - ENTRYPOINT RUN and CMD can use either form.
+
+  - Shell form looks like this:
+     
+	> nano notes.txt
+
+  - Exec Forms looks like this:
+
+	> ["/bin/nano", "notes.txt"]
+
+  
+
+EXPOSE
+
+  - The EXPOSE statement, maps a port into the container
+
+	> EXPOSE 8080
+
+
+VOLUMES
+
+  - The VOLUMES statement, defines or ephemeral volumes
+    defines a container can be used by other container
+
+  	> VOLUME ["/host/path/"  "/container/path/"]
+ 	
+	> VOLUME ["/shared-data"]
+  
+  - Avoid defining shared folders in Dockerfiles
+
+
+  
+WORKDIR
+
+  - The WORKDIR statement sets the directory the container starts in
+
+	> WORKDIR /install/
+
+
+USER
+
+  - Sets which user the container run as
+
+	> USER arthur
+
+	> USER  1000
+
+
+
+
+
+
+
+EXEMPLO DE DOCKERFILE
+--------------------------------------------------
+	
+	> nano Dockerfile
+
+	FROM ubuntu:16.04 as builder				-> pega de uma image set como corrente e usa outro nome	
+	RUN apt-get update
+	RUN apt-get -y install curl
+	RUN curl https://google.com  | wc -c > google-size 	-> wc (word count - conta palavras e joga em um arquivo > google-size)
+
+	FROM alpine						-> seta nova imagem
+	COPY --from=builder /google-seze /google-size		-> Copia arquivos da imagem build acima para a mesma pasta na imagem destino
+	ENTRYPOINT echo google is this big; car google-seze	-> Um entrypoint para rodar um shell e exibir comentario
+
+
+	> docker built -t too-big .
+	> docker run too-big
+
+
+
+Manages Kernel Features used for years before docker
+====================================================
+
+	- Uses "cgroups" to contain process
+
+	- Uses "namespaces" to contain networks
+
+	- Uses "copy-on-write" filesystem to build images
+
+
+	
+Docker Control Seocket
+----------------------------------------------------
+
+  - Docker is two programs: a client and a server
+
+  - The Server receives commands over a socket (either over a network or through a "file")
+
+  - The client can even run inside docker itself
+
+
+
+
+Docker Control Socket
+=====================================================
+
+Olhando o arquivo do socket
+
+	> ls /var/run/docker.sock
+
+Rodando o cliente dentro do container e ganhando acesso 
+montando um volume (-v) dentro container com o exato mesmo path do container 
+rodando a propria imagem do docker dentro do container 
+rodando o shell (sh).
+
+	> docker run -ti --rm -v /var/run/docker.sock:/var/run/docker.sock  docker sh
+	
+
+Para ter certeza que o docker está rodando no container
+
+	># docker info
+
+Podemos rodar um container como cliente. Não é bem um container dentro
+de um container, mas um cliente container controlando o servdido fora
+do container
+
+	># docker run --rm -ti ubuntu bash
+	root@123,122.123># ls -la
+
+
+
+
+NETWORKING
+-------------------------------------------------------
+Quando se cria uma rede virtual em docker, o docker cria uma bridge
+
+
+Para demonstrar redes, vamos Iniciar um container qualquer
+net=host, da full acesso a rede do host, desligado todas as proteções
+
+
+	> docker run -ti --rm --net=host ubuntu:16.04
+
+Vamos instalar, atualizar e baixar uns utilitarios de bridg
+
+	> apt-get update && apt-get install bridge-utils
+
+
+Depois de instalado, vamos ver as bridges do sistema (briges = NetWork)
+
+	> brctl show
+
+		---> no resultado deste comando atentar para o 
+		     docker0 que é a bridge padrão na criação dos container
+
+
+
+Criando uma nova network
+
+	> docker network creat my-new-network
+
+
+
+
+Routing
+--------------------------------------------------------
+
+Verificando os routings
+
+	> sudo iptables -n -L -t nat
+
+    Obs: vamos ver algumas routs criadas para containers
+
+Rodar um docker container que vai prover alguns utilitarios
+para ipTables, -net=host vai rodar na rede principal
+--privileged vai nos dá acesso a tudo no sistema
+
+	> docker run -ti --rm --net=host --privileged=true ubuntu bash
+
+Agora vamos instalar os utilitarios no container
+
+	># apt-get update
+	># apt-get install iptables 
+	
+
+Agora vamos olhar as networks no nosso host
+
+	> sudo iptables -n -L -t nat
+
+
+Em outro terminal vamos começar um container, mapeando (-p)
+a porta 8080 do container com a porta 8080 do host
+
+
+	> docker run ti --rm -p 8080:8080 ubuntu bash
+
+
+Checando a rede novamente, note que na resposta vamos encontrar o container redirecionando a porta
+8080 para a mesma porta no host
+
+	> sudo iptables -n -L -t nat
+
+		---> Chain DOCKEr (2 references)
+		     target	port	opt	source	destination
+		     RETURN     all     --   0.0.0.0/0	0.0.0.0/0
+		     RETURN     all     --   0.0.0.0/0	0.0.0.0/0
+		     DNAT       tcp     --   0.0.0.0/0	0.0.0.0/0	tcp dpt:8080 to:127.17.0.2:8080
+
+
+
+
+Namespaces
+--------------------------------------------------------
+
+É um tipo de caracteristicas no kernell do linux que vai 
+prover um completo isolamento de rede que para processos diferentes no sistema
+
+- Permite processos serem anexados a um segmento de rede privada
+
+- Essas redes privadas são brifges dentro de uma rede compartilhada com o resto dos containers
+
+- Cada container tem sua network virtual "cards"
+
+- Containers têm sua propria copia de uma network stack
+
+- Namespaces reforça os containers serem independentes uns dos outross
+
+Explanations:
+
+	> sudo iptables -n -L -t nat
+
+
+
+PROCESS
+------------------------------------------------------------
+- Processes como from other processes - parent-child relationship
+
+- When a child process exist, it returns and exit code its parent
+
+- Process Zero is special; called init, the process that starts the rest
+
+Exemplo Container
+----------------------------
+
+1) Rodando um container
+
+	> docker run --rm -ti --bame hello ubuntu bash
+
+2) No outro terminal, achar o nome do processo rodando, aqui achar somente
+   o estado .State com o Numero do processo .Pid
+
+	> docker inspect --format '{{.State.Pid}}' hello
+		-> 7368
+
+	obs.: Copiar o processo acima
+
+3) No mesmo terminal, rodando um novo container, dando acesso a todos os privilégios --priviged=true
+   e desligando ainda mais as segurançãs com o paramentro --pid=host
+
+	> docker run --rm -ti --privileged=true --pid=host ubuntu bash
+
+4) Agora que o peocesso acima está rodando, vamos matar o processo anterior, notando que esse container
+   correspondente a este processo é eliminado
+
+	> kill 7368
+
+
+
+COW = Copy On Write
+---------------------------------------------------------------
+- The content of layers are moved between container in gzip files
+
+- Container are independet of the store engine machine
+
+- Aby container can be loaded (almost) anywhere
+
+- It is possible to run out of layers on some of the storage engines
+
+
+
+
+Volumes and Bind Mounting (Share folders)
+-----------------------------------------------------------------
+- They are build on the Linux VFS (Virtual File System)
+
+- Mouting devices on the VFS
+
+
+Exemple
+---------------------
+
+1) Criando um container, passando privilegios para o container poder manipula-lo
+
+	> docker run -ti --rm --privileged=true ubuntu bash
+
+2) fazendo um diretorio 
+
+	> mkdir exemple
+	> mkdir work
+	> cd work
+	> touche a b c e f 
+	> mkdir other-work
+	> cd other-work
+	> touch other-a other-b other-c other-d 
+	> cd ..
+
+4) Mostrando todos os arquivos
+
+	> ls -R
+
+		-> 	./other-work:
+			other-a		other-b		other-d
+			
+			./work
+			a 	b	d	e	f
+
+5) Manipular a file system, montando a pasta other-work em cima da work
+
+	> mount -o bind other-work work
+
+6) Mostrando os arquivos das pastas, podemos ver que o comando acima
+   não copio o conteudo do diretorio other-work dentro do diretorio work
+   e tambem não apagou o conteudo de work, apenas levou uma layer e cobriu
+   o conteúdo de work
+   O conteudo de work ainda está lá
+
+	> ls -R
+
+		-> 	./other-work:
+			other-a		other-b		other-d
+			
+			./work
+			other-a 	other-b		other-d
+
+
+7) Para tirar a cobertura da layer de other-work de work, precisamos desmontar
+
+	> umount work
+	> ls -R
+
+
+		-> 	./other-work:
+			other-a		other-b		other-d
+			
+			./work
+			a 	b	d	e	f
+
+
+
+What is a Docker Registry?
+--------------------------------------------------
+
+- Is a program
+
+- Stories layers and images
+
+- Listen on (usually) port 5000
+
+- Maintains an index and searches tags
+
+- Authorizes and authenticates connections (sometimes)
+
+- Popular Docker Resgistry Programs 
+
+	* THe official Python Docker Registry
+
+	* Nexus
+
+- Runing in Docker Registry in Docker
+
+	* Docker makes installing network services (reasonably)
+
+	* The registry is a Docker service
+
+Exemplo
+------------------------------------
+
+1) Rodando o registry (-d) depach, -p expoe porta 5000 no registry e na local machine,
+   --restart=always que diz se isso contina morendo, restart imediatamente
+   --name registry (para pode rastrear) e o nome resgistry:2 (versão 2)
+
+	> docker run -d -p 5000:5000  --restart=always  --name registry registry:2
+
+2) Vamos adicionar uma tag  server (localhost) porta (:5000) nome da compania (/mycompany) image name (/my-ubuntu:99)
+
+	> docker tag ubuntu14.04 localhost:5000/mycompany/my-ubuntu:99
+
+3) Puxando para o registry, copiando localmente no registry. O que aconteça com a imagem oficial
+   teremos uma cópia localmente
+
+	> docker push localhost:5000/mycompany/my-ubuntu:99
+
+4) Proximo passo, seria bom aprende o procedimento para configurar segurança a este repositorio 
+   antes de expo-lo a internet
+   para aprende como fazer isso, recorra a documentação oficial:
+
+	https://docs.docker.com/registry
+
+	procurar na seção: Deployment Instructions
+
+
+
+Store Options (to preservate your data)
+-------------------------------------------
+
+- local storage
+
+- Docker trusted Registry: 
+
+	* https://docs.docker.com/ee/dtr
+- AWS ECS - Elastic Container Registry
+
+- Azure Container Registry
+
+	https://azure.microsift.com/en-us/services/container-registry
+
+- Google Cloud Container Registry
+
+	* https://cloud.google.com/container-registry
+
+
+Other Option: Saving and Loading Container without use registry at all
+--------------------------------------------------------------------------------
+
+	* docker save
+
+	* docker load
+
+Exemplo
+---------------------------------------
+
+1) Olhando as images
+
+	> docker images
+
+2) Salvando as imagens mais importantes, docker save é opção para salvar a imagem
+   -o (output) é nome do arquivo que vai guardar as imagens, 
+   logo em seguida o nome das imagens que vão ser salvas, que no caso:
+   'debian:sid', 'busybox' e 'ubuntu:14.04'
+
+	>docker -save -o my-images.tar.gz debian:sid busybox ubuntu:14.04
+
+        obs: isto é muito util para backup para guardar imagens, levar para clientes e etc...
+
+3) Para testar vamos apagar as imagens locais, 
+
+	> docker rmi debian:sid busybox ubuntu:14.04
+	> docker images
+
+4) Lendo as imagens, docker load é o comando, -i (input) que é o nome do arquivo que contém as imagens
+
+	> docler load -i my_images.tar.gz
+
+
+One Container = One Hand Clapping
+---------------------------------------------------------------
+
+- Many orchestration systems for Docker
+
+- Start your container, keep'em running and restart if they fail
+
+- Services discovery - allow them to find each other
+
+- Resources allocation - match containers to computers
+
+
+
+
+
+Docker Compose
+------------------------------------------------------------------
+
+- Simple one to start with
+
+- Single machine coordinator
+
+- Designed for testing and development project that have more than one container 
+  and thing that does not scale dynamic
+
+- Brings up all your containers, volumes, networks, etc., with one command
+  which is it: docker compose up
+
+
+
+Kubernets
+---------------------------------------------------------------------
+
+- COntainers that run programs
+
+- Pods are groups of container together
+
+- Services make pods available to others
+
+- Lables are used for very advanced servicesdiscovery
+
+
+Advantages of Kubrnets
+------------------------------------------------------------------------
+
+- Makes scripting large operations possible with the 
+  Kubect1 command
+
+- Very Flexible overlay networking to allow your container to find each other and connect to each other
+
+- Runs equally well on your hardware or a cloud provider
+
+- Rus equally well on your hardware or a cloud provider
+
+- And it has service discovery Built-in 
+
+- To get start it
+
+	* https://kubernets.io
+
+
+  
+
+EC2 Container Service (ECS)
+-------------------------------------------------------------------------
+
+- Uses other vocabularies to do the same thing comparing to the others
+
+- Task definitions
+
+	* Defines a set of container that always run together
+
+- Task
+
+	* Actually makes a container run right now
+
+- Sevices and exposes it to the Net
+
+	* Ensure that a task is running all the time
+
+
+
+Avatages of ECS
+-----------------------------------------------------------------------------
+
+- Connects load balances (ELBs) to services
+
+- You can creat your own host instances in AWS
+
+- Makes your instance start the agent and join the cluster
+
+- Pass the docker control socket into the agent
+
+- Provides docker repos - and it's easy to run your own repo
+
+- Note that containers (tasks) can be part of CloudFormation stacks!
+
+
+
+
+
+AWS Kubernets
+----------------------------------------------------------------------------
+Com o cluster ja criado, tudo é feito por meio de command line
+
+1) Olhando o que está rodando, no inicio apenas vamos olhar o seviço de gerenciamento, 
+   tudo em Kubernets tem um replication e services.
+
+	> kubectl get services
+
+2) Crianado um serviço, primeiro o master controller
+
+	> kubectl apply -f https://raw.githubsercontent.com/kubernets/kubernets/v1.10.3/examples/guestbook-go/redis-master-controller.json
+
+3) Agora um redis service, praticamente é o mesmo comando e no final muda de controller para service
+
+	> kubectl apply -f https://raw.githubsercontent.com/kubernets/kubernets/v1.10.3/examples/guestbook-go/redis-master-service.json
+
+4) Criar um Redis slave replication controler
+
+	> cubecrl apply -f https://raw.githubsercontent.com/kubernets/kubernets/v1.10.3/examples/guestbook-go/redis-slave-controller.json
+
+
+5) Criando o Redis Slave Service
+
+	> cubecrl apply -f https://raw.githubsercontent.com/kubernets/kubernets/v1.10.3/examples/guestbook-go/redis-slave-service.json
+
+6) Criando o guestbook application, classico exemplo de kubernets
+
+	> cubecrl apply -f https://raw.githubsercontent.com/kubernets/kubernets/v1.10.3/examples/guestbook-go/guestbook-controller.json
+
+7) Guest book para os serviços
+
+	> cubecrl apply -f https://raw.githubsercontent.com/kubernets/kubernets/v1.10.3/examples/guestbook-go/guestbook-service.json
+
+8) Checando se funcionou
+
+	> kubectl get services
+		-> 
+
+		NAME		TYPE		CLUSTER-IP	EXTERNAL-IP					PORT(S)		AGE	SELECTOR
+		guestbook	LoadBalancer	10.100.62.73	aed88c2 ...8-985448727.us-west-2.elb.amazon.com 3000:30881/TCP	46s	app=gustbook
+		kubernets	ClusterIP	10.100.0.1	<none>						443/TCP		10h	<none>
+		redis-master	ClusterIP	10.100.151.92	<none>						6379/TCP	1m	app=redis,role=master
+		redis-slave	ClusterIP	10.100.202.167	<none>						6379/TCP	50s	app=redis,role=slave
+
+9) Para ver o guestbook, pode-se copiar o guestebook acima em EXTERNAL-IP e acrescentar a porta 3000 no browser
+
+	> aed88c2 ...8-985448727.us-west-2.elb.amazon.com:3000
+
+10) Agora que ja foi testado podemos deletar todos os serviços de uma só vez 
+	rc/redis-master 	-> Redis Master
+	rc/redis-salave 	-> Redis Slave
+	rc/guestbook 		-> Oveall guestebook
+	svc/redis-master  	-> Data Store Master
+	svc/redis-slave 	-> Redis Slave
+	svc/guestbook 		-> Service Guestbook
+
+	> kubectl delete rc/redis-master rc/redis-salave rc/guestbook svc/redis-master  svc/redis-slave svc/guestbook 
+
+	--> 	replicationcontroller "redis-master" deleted
+	 	replicationcontroller "redis-slave" deleted
+		replicationcontroller "guestbook" deleted
+		service "redis-master"deleted
+		service "redis-slave" deleted
+		service "guestbook" deleted
+
+
+11) Checando os clusters
+
+	> kubectl get services
+		-> Vamos notar apenas o serviço Kubernets de gerenciamento funcionando
+
+		NAME		TYPE		CLUSTER-IP	EXTERNAL-IP					PORT(S)		AGE	SELECTOR
+		kubernets	ClusterIP	10.100.0.1	<none>						443/TCP		10h	<none>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	

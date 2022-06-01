@@ -1,0 +1,2029 @@
+----------------------------------------------------
+COMANDOS
+----------------------------------------------------
+
+1) Rapida e facil instalação
+
+	> curl -sSL https://get.docker.com/ | sh
+
+2) Como criar um Docker Host em seu computador ou cloud provider
+
+	> docker-machine create --drive=virtualbox myhost
+
+		- Configure Docker Cliente to talk to host
+		
+		- Crate and pull images
+
+		- Start, stop, and restart containers
+
+		- Upgrade Docker
+
+3) Criando um novo Docker Machine Host
+	-d virtualbox é o driver
+
+	> docker-machine -d virtualbox myhost
+
+4) Verificando a Docker Machine no ambiente
+
+	> env | grep DOCKER5
+
+5) Verificando 
+
+	> docker-machine ls
+	> docker-machine env myhost
+
+6) Configurando os clientes para falar com myhost, vamos digitar o comando abaixo e copiar a ultima linha
+   basta executa-la e ele vai setar todos as variaveis de ambeientes exibidas
+
+	> docker-machine env myhost
+
+	  .
+	  .
+	  .
+	  eval $("C:\Progeam Files\Docker Toolbox\docker-machine.exe" env myhost)
+
+	> eval $("C:\Progeam Files\Docker Toolbox\docker-machine.exe" env myhost)
+	> env | grep DOCKER
+	
+
+
+DOCKER FILE INSTRUCTIONS
+=================================================================================
+
+	- Dockerfile reference
+		* Usage
+		* Format
+		* Parser directives
+		* escape
+
+	- Environment replacement
+		.dockerignore file
+
+	- FROM
+	- RUN
+		* Unknown issues [RUN]
+	- CMD
+	- LABEL
+	- MAINTAINER [deprecated]
+	- EXPOSE
+	- EMV
+	- ADD
+	- COPY
+	- ENTRYPOINT
+		* Exec from ENTRYPOINT example
+		* Shell from ENTRYPOINT example
+		* Understand how CMD and ENTRYPOINT interact
+	- VOLUME
+	- USER
+	- WORKDIR
+	- ARG
+		* Impact on build caching
+	- ONBUILD
+	- STOPSIGNAL
+	- HEALTHCHECK
+	- SHELL
+	- Dockerfile examples
+
+
+1) Criando um docker file
+
+	> mkdir helloimage
+	> cd helloimage
+	> vi Dockerfile
+	-------------------------------------------------
+	FROM ubuntu
+
+	CMD echo "hello world"
+	-------------------------------------------------
+
+	> ls 
+		Dockerfile
+
+	> docker image build -t helloworld .
+
+
+
+
+CRIAR UM CONTAINER JAVA
+----------------------------------------------------------------
+
+Cap 2 - aula 5
+
+1)  Olhando os diretorios
+
+	> PWD
+		/Users/producer/docker-for-java/chapter2
+
+	> ls
+
+		Dockerfile		myapp		slides.key
+		helloworld		readme.adoc	webapp.war
+
+	> ls -la
+		drwxr-xr-x  2  producer  staff	68 Feb 26 09:30 .
+		drwxr-xr-x@ 8  producer  staff 272 Feb 26 09:45 ..
+
+
+2)  Construindo uma imagem com OpenJDK
+
+	> vi Dockerfile
+		---------------------------------------
+		FROM openjdk
+
+		CMD java -version
+		---------------------------------------
+	> build image build -t hellojava .
+	> docker container hellojava
+
+
+
+
+
+CRIANDO UMA IMAGEM MENOR
+------------------------------------------------------------
+1) Vamos abrir o nosso docker file anterior
+
+	> vi Dockerfile
+		---------------------------------------
+		FROM openjdk:jdk-alpine
+
+		CMD java -version
+		---------------------------------------
+	> build image build -t hellojava:2 .
+	> docker container hellojava
+
+
+DOCKER FILE 
+-----------------------------
+	COPY: copia novos arquivos ou pastas da sua maquina para o container filesystem
+
+	ADD: faz a mesma coisa que o COPY
+	     Permite que o arquivos tar sejam auto-descompactados na imagem
+
+		Ex: 
+			ADD app.tar.gz  /opt/var/myapp
+
+	curl: Extrai comandos a partir de uma URL
+	      Recomendado uso do curl ou wget 
+		
+
+Exemplo:
+-------------------
+1) Criando uma novo docker file a partir e copiando um arquivo par o container
+
+	> mkdir helloweb
+	> pwd
+	  /user/producer/docker-for-web-java/chapter2
+	> cd helloweb
+	> cp ../webapp.war  .
+	> vi Dockerfile
+		---------------------------------------
+		FROM jboss/wildfly
+		
+		COPY webapp.war /opt/jboss/wildfly/standalone/deployments/webapp.war
+	
+		CMD java -version
+		---------------------------------------
+	> docker image build -t helloweb .
+	> docker container run -p 8080:8080 -d helloweb
+	  $ curl http://localhost:8080/tcp romantic_poincare
+
+
+
+Obs:
+=======================================================================================================
+jbos/wildfly (imagem no https://hub.docker.com/r/jboss/wildfly/dockerfile
+=======================================================================================================
+# Use latest jboss/base-jdk:11 image as the base
+FROM jboss/base-jdk:11
+
+# Set the WILDFLY_VERSION env variable
+ENV WILDFLY_VERSION 18.0.1.Final
+ENV WILDFLY_SHA1 ef0372589a0f08c36b15360fe7291721a7e3f7d9
+ENV JBOSS_HOME /opt/jboss/wildfly
+
+USER root
+
+# Add the WildFly distribution to /opt, and make wildfly the owner of the extracted tar content
+# Make sure the distribution is available from a well-known place
+RUN cd $HOME \
+    && curl -O https://download.jboss.org/wildfly/$WILDFLY_VERSION/wildfly-$WILDFLY_VERSION.tar.gz \
+    && sha1sum wildfly-$WILDFLY_VERSION.tar.gz | grep $WILDFLY_SHA1 \
+    && tar xf wildfly-$WILDFLY_VERSION.tar.gz \
+    && mv $HOME/wildfly-$WILDFLY_VERSION $JBOSS_HOME \
+    && rm wildfly-$WILDFLY_VERSION.tar.gz \
+    && chown -R jboss:0 ${JBOSS_HOME} \
+    && chmod -R g+rw ${JBOSS_HOME}
+
+# Ensure signals are forwarded to the JVM process correctly for graceful shutdown
+ENV LAUNCH_JBOSS_IN_BACKGROUND true
+
+USER jboss
+
+# Expose the ports we're interested in
+EXPOSE 8080
+
+# Set the default command to run on boot
+# This will boot WildFly in the standalone mode and bind to all interface
+CMD ["/opt/jboss/wildfly/bin/standalone.sh", "-b", "0.0.0.0"]
+=======================================================================================================
+
+
+
+
+
+
+
+
+
+CONSTRUINDO AS PROPRIAS FUNCIONALIDADES
+------------------------------------------------------------
+
+- Criando o aplicativo para copiar na imagem
+
+	> pwd
+		/Users/producer/docker-for-java/chapeter2
+
+	> ls 
+		helloworld	myapp	readme.adoc	slides.key	webapp.war
+
+	> mvn -f myapp/pom.xml clean package
+		Building jar: /Users/producer/docker-for-java/chapeter2/myapp/target/myapp-1.0-SNAPSHOT.jar
+
+	> vi Dockerfile
+		---------------------------------------
+		FROM openjdk:jdk-alpine
+		
+		COPY myapp/target/myapp-1.0-SNAPSHOT.jar /deployments/
+	
+		CMD java -jar /deployments/myapp-1.0-SNAPSHOT.jar
+		---------------------------------------
+
+	> docker build -t hellojava:3 .
+	> docker container run -d hellojava:3  
+
+
+	Quando fizer mudanças, reconstruir o docker file
+	Reconstruindo o docker file
+	-----------------------------------------------
+	> mvn -f myapp/pom.xml clean package
+		Building jar: /Users/producer/docker-for-java/chapeter2/myapp/target/myapp-1.0-SNAPSHOT.jar
+	> docker build -t hellojava:34 .
+	> docker container run -d hellojava:4  
+
+
+
+
+
+
+OUTRAS INSTRUÇÕES DO DOCKER FILE
+---------------------------------------------------------------
+
+	RUN: usada para instalar softwares e pacotes
+	
+		ex: 
+			RUN apt-get update  &&  apt-get install  -y git
+
+			RUN /opt/jboss/wildfly/bin/add-user.sh admin Admin#007 -silent
+
+	CMD: é o comando default para executar o container; pode se override pelo CLI
+	
+		ex:
+			CMD ["/opr/jboss/wildfly/bin/standalone.sh". "-b", "0.0.0.0", "-bmanagement", "0.0.0.0"]
+
+			docker run mywildfly bash
+
+	ENTRYPOINT: configura o container executavel. Pode ser override usando --entrypoint do CLI
+
+		Ex:
+			ENTRYPOINT ["/entrypoint.sh"]
+	
+	EXPOSE: porta da rede na qual o container escuta
+
+		Ex: EXPOSE 9990
+
+			Necessita publicar na porta do host
+
+	VOLUME: cria e monta um ponto com o nome especifico
+
+		VOLUME /opt/couchbase/var
+		docker container run ... -v ~/data:/opt/couchbase/var
+
+	USER: define o nome do usuario ou o nome IUD quando rodando a imagem
+
+	HEALTHCHECK: realiza o helthcheque em uma aplicação em expecifico dentro do container
+
+		Ex:
+		HEALTHCHECK --intervsl=5s --timeout=3s CMD curl --fail https://localhost:8091/pools || exit 1
+
+
+
+
+GERANDO IMAGENS A PARTIR DO EMPACOTAMENTO DO MAVEM
+---------------------------------------------------
+Exemplo em: https://github.com/arun-grupta/docker-java-sample
+
+1) Começando o projeto
+
+	> pwd
+		/Users/producer/docker-java-sample
+
+2) Vamos empacotar a aplicação java
+
+	> mvn clean package exec:java
+
+3) No pome, vamos colocar um profile para o docker para o plugin criar a imagem
+
+	pom.xml
+	--------------------------------------
+	<profiles>
+	     <profile>
+		<id>docker</id>
+		<build>
+		    <plugins>
+			<plugin>
+			     <groupId>io.fabric8<</group>
+			     <artificId>docker-mavem-plugin</artificId>
+			     <version>0.19.0</version>
+			     <configuration>
+				<images>
+					<image>
+					    <name>jellojava</name>
+					    <build>
+						<from>openjdk:latest</from>
+						<assembly>
+						    <descriptorRef>artfact</descriptRef>
+						</assembly>
+						<cmd>java -jar maven/${project.name}=${project ...
+					    </build>				
+					    <run>
+						<wait>
+							<log>Hello World!</log>
+						</wait>
+					    </run>	
+					</image>			
+				<imagess>
+			     </configuration>
+				.
+				.
+				.
+
+
+4) Em pacotando com o mavem 
+
+	> mvn package -Pdocker 
+
+5) Vamos obser a imagem criada a partir do mavem
+
+	> docker images ls
+
+6) Outro comando para o mapeamento do mavem no pome:
+
+	> mvn install -Pdocker
+
+7) Outros comandos desse plugin de mapeamento para geração de docker pelo mavem
+	
+	https://github.com/fabric8io/docker-mavem-plugin
+ 
+
+		Goal				Description
+		---------------------------	------------------------------------------
+		docker:start			Cria e inicia o container	
+		docker:stop			Para e destroi o container
+		docker:build			Build a image	
+		docker:watch			Assiste para fazer o reboot e restart
+		docker:push			Push images para o registro
+		docker:remove			Remove imagens para o local docker host
+		docker:logs			Mostra o log do container
+		docker:source			Anexa um arquivo docker build par o projeto Mavem
+		docker:volume-create		Cria o volume para compartilhar dados entre containers
+		docker:volume=remove		Remove o volume criado
+
+
+
+
+Docker Compose
+-----------------------------------------------------------------
+- Define e roda multicontainer applications
+
+- Configuração definida em um ou mais arquivos
+
+	* docker-compose.yml (default)
+
+	* docker-compose.override.yml (default)
+
+	* Multiples files especifico com uso de -f
+
+- Simples comando para gerenciar todos os serviços
+
+- Muito bom para dev, staginf e CI
+
+
+================================
+EXEMPLOS
+================================
+1) Vendo a versão do docker-compose CLI
+
+	> docker-compose --version
+
+2) Sinaxe
+
+	Define and run multi-container applications with Docker.
+
+	Usage:
+	  docker-compose [-f <arg>...] [options] [COMMAND] [ARGS...]
+	  docker-compose -h|--help
+
+	Options:
+	  -f, --file FILE             Specify an alternate compose file
+	                              (default: docker-compose.yml)
+	  -p, --project-name NAME     Specify an alternate project name
+	                              (default: directory name)
+	  --verbose                   Show more output
+	  --log-level LEVEL           Set log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+	  --no-ansi                   Do not print ANSI control characters
+	  -v, --version               Print version and exit
+	  -H, --host HOST             Daemon socket to connect to
+	
+	  --tls                       Use TLS; implied by --tlsverify
+	  --tlscacert CA_PATH         Trust certs signed only by this CA
+	  --tlscert CLIENT_CERT_PATH  Path to TLS certificate file
+	  --tlskey TLS_KEY_PATH       Path to TLS key file
+	  --tlsverify                 Use TLS and verify the remote
+	  --skip-hostname-check       Don't check the daemon's hostname against the
+	                              name specified in the client certificate
+	  --project-directory PATH    Specify an alternate working directory
+	                              (default: the path of the Compose file)
+	  --compatibility             If set, Compose will attempt to convert keys
+	                              in v3 files to their non-Swarm equivalent
+	
+	Commands:
+	  build              Build or rebuild services
+	  bundle             Generate a Docker bundle from the Compose file
+	  config             Validate and view the Compose file
+	  create             Create services
+	  down               Stop and remove containers, networks, images, and volumes
+	  events             Receive real time events from containers
+	  exec               Execute a command in a running container
+	  help               Get help on a command
+	  images             List images
+	  kill               Kill containers
+	  logs               View output from containers
+	  pause              Pause services
+	  port               Print the public port for a port binding
+	  ps                 List containers
+	  pull               Pull service images
+	  push               Push service images
+	  restart            Restart services
+	  rm                 Remove stopped containers
+	  run                Run a one-off command
+	  scale              Set number of containers for a service
+	  start              Start services
+	  stop               Stop services
+	  top                Display the running processes
+	  unpause            Unpause services
+	  up                 Create and start containers
+	  version            Show the Docker-Compose version information
+	
+
+
+DOCKER-COMPOSE OPTIONS
+-----------------------------------------------------------------------------
+
+	- Multiplo Projetos usando -p
+
+	  Cria multiplos ambientes isolados no host
+
+	- Default override
+	  docker-compose.override.yml
+		* Substitue ou extende valores
+		* Opções de valores simples tais como portas são concatenados; novos valores e de maior precedencia
+
+EXEMPLO:
+----------------------
+
+1) -p
+	> pwd
+	  /User/producer/docker-for-java/chapter3/helloweb
+
+	> docker-compose up -d
+	> more docker-compose.yml
+	
+		version: '3'
+		services:
+		   web:
+		      images: jboss/wildfly
+		      volumes:
+			- ~/deployments:/opt/jbos/wildfly/standalone/deployments
+		      ports:
+			- 8080:8080
+
+	> docker-compose up -d
+	
+	> docker-compose down
+
+	> docker-compose -p myapp up -d
+
+	
+
+	
+	2) Override methode
+
+	  - Criando o docker-compose.override para substituir a porta 80 para 8080 no container
+
+	> vi docker-compose.override.yml
+
+		version: "3"
+		services:	
+		  web:
+		    ports:
+			-80:8080
+	
+	  - Rodadndo o serviço
+
+	> docker-compose up -d
+
+	  - Verificando a sobreposição do comando executado
+
+	> docker-compose ls
+
+	    Name			Command			State			Ports
+	----------------------------------------------------------------------------------------------
+	helloweb_web1		/opt/jboss/wildfly/bin/sta	Up		0.0.0.0:80->8080/tcp
+
+
+
+3) -f
+
+	Multiples files usando opção -f
+		
+		* Substitue ou extend o valor do nivel acima
+
+	Exemplo 1: Docker-compose com dois serviços web e db
+
+		docker-compose.yml
+		----------------------------------------------------
+		version: '3'
+		services:
+		   web:
+		     image: arungupta/couchbase-javaee:travel
+		     environment:
+	
+			- COUCHBASE_URI=db
+		     ports:
+			- 8080:8080
+			- 9990:9990
+		     depends_on:
+			- db
+		     db:
+			images: arungupta/couch/couchbase:travel
+			ports:
+			- 8091:8091
+			- 8092:8092
+			- 8093:8093
+			- 11210:11210
+
+	Exemplo2: Docker-compose com serviço overrided
+
+		docker-compose.db.yml
+		------------------------------------------------------
+		version: '3'
+		services:
+		   web:
+
+		     ports:
+			- 80:8080
+
+		     db:
+			images: couchbase:prod
+			ports:
+			- 8091:8091
+		------------------------------------------------------
+
+	* Rodando 
+		
+		> docker-compose -f docker-compose.yml -f docker-compose.db.yml  up -d
+
+	
+	* Criando o serviço
+
+		> docker-compose -f docker-compose.yml -f docker-compose.db.yml ps
+
+	* Shutfown
+
+		> docker-compose -f docker-compose.yml -f docker-compose.db.yml down
+
+
+
+	Multiples Files: Extends
+	--------------------------------------------------------
+	
+	1 - configuration.yml
+	    ------------------------------------------------
+	    version: '2'
+	    services: 
+	       config:
+		 environment:
+			AWS_ACCESS_KEY: XXXX
+			AWS_SECRET_KEY: XXXX
+
+
+	2 - docker-compose.yml
+	    ------------------------------------------------
+	    version: '2'
+	    services: 
+	       web:
+		 extends:
+		   files: configuration.yml		(->Referencia ao arquivo acima)
+		   services: config
+	         images:jboss/wildfly
+		 volumes:
+		   - ~/deployments:/opt/jboss/wildfly/standalone/deployments
+		 ports: 
+		   - 8080:8080
+
+	* Rodando com a opção verbose para reconhecer a referencia
+
+		> docker-compose --verbose up -d
+
+
+Docker Compose: Common Use Cases
+--------------------------------------
+
+
+	USE CASE				COMMAND
+        -------------------------------------  	------------------------------------
+ 	Dev setup				docker-compose up
+
+	Local/remote host			DOCKER_HOST, DOCKER_TLS_VERIFY, DOCKER_CERT_PATH
+
+	Single/multiple hosts			Integrated with Swarm
+
+	Multiples isolated environments		docker-compose up -p <project>
+
+	Automated test setup			docker-compose up
+						mvn test
+						docker-compose down
+
+	
+	Dev/prod impendance mismatch		docker-compose up -f docker-compose.yml -f production.yml
+
+
+
+
+
+
+
+
+
+SWARM MODE
+------------------------------------------------------------
+
+	- Nova caracteristica a partir da versão 1.12
+
+	- Gerenciamento nativo de cluster de Docker engines chamado de Swarm
+
+	- Docker CLS para criar a swarm, deploy apps, e gerenciar um swarm
+		Optional feature: precisa ser explicitamente enabled
+
+	- No single point of faile (SPOF)
+
+	- Declarative state model
+
+	- Self-Organizing and self-healing
+
+	- services discovery, load balancing, and scaling
+
+	- Rolling update
+
+	
+
+EXEMPLO:
+======================
+
+
+- Comandos disponivel
+		
+	> docker swarm --help
+
+
+- Iniciando swarm mode
+
+	> docker swarm init
+
+- Iniciando especificamente para ambiente windows, devemos especificar o IP do host
+
+	> docker swarm init --advertise-addr 192.168.99.100
+
+- Colhendo detalhes sobre o cluster
+
+	> docker info 
+
+- Sair do cluster swarm
+
+	> docker swarm leave
+
+- Se voce for o clust não vai conseguir sair a mesnos que force a saida com opção -f
+
+	> docker swarm leave -f
+
+
+
+SWARM MODE: INITIALIZE
+--------------------------------------------------
+
+	> docker swarm init --listen-addr <ip>
+
+SWARM MODE: Add WORKER
+---------------------------------------------------
+
+	> docker swarm join --token <worker_token> <manager>
+
+	> docker sawm join --manager --token <manager_token>  --listen-addr <master2> <master1>
+
+
+
+EXEMPLO:
+==========================
+
+1) Esse script criar docker-machine que serão usadas no swarm
+
+			Scritp:
+
+			swarm-machine.sh
+			----------------------------------------------------------------
+			#!/bin/bash
+
+			# Swarm mode using Docker Machin
+
+			managers = 3	
+			workers=3
+
+			# create manager machines
+			echo "======> Creating $managers manager machines ...";
+
+			for node in $( seq 1 $managers);
+			do 
+				echo "====> Creating manager$node machine ...";
+				docker-machine creat -d virtualbox manager$node;
+			done			
+
+			# Create worker machines
+			echo "====> Creating $workers workers machines ..."
+
+			for node in $(seq 1 $workers);
+			do 
+				echo "===> Creating worker$node machine ...";
+				docker-machine create -d virtualbox worker$node;
+			done
+
+			# list all machines
+			docker-machine ls
+			----------------------------------------------------------------
+	
+
+2) executar o script 
+
+	> ./swarm-machine.sh
+	> docker-machine ls
+
+		NAME		ACTIVE 		DRIVER		STATE	URL				SWARM	DOCKER	ERROS
+		manager1	-		virtualbox	Running	tcp://192.168.99.100:2376		v1.13.1
+		manager2	-		virtualbox	Running	tcp://192.168.99.101:2376		v1.13.1
+		manager3	-		virtualbox	Running	tcp://192.168.99.102:2376		v1.13.1
+		worker1		-		virtualbox	Running	tcp://192.168.99.103:2376		v1.13.1
+		worker2		-		virtualbox	Running	tcp://192.168.99.104:2376		v1.13.1
+		worker3		-		virtualbox	Running	tcp://192.168.99.105:2376		v1.13.1
+
+
+3) Iniciar um swarm mode cluster na docker-machine manager1, 
+   --listen-addr vamos informar o ip da manager 1 que pegamos com a macro $(docker-machine ip manager1)
+   e informar a docker machine em --advertise-addr com o auxilio da macro $(docker-machine ip manager1)   
+   No final o comando inicia o manager node na docker-machine1
+
+	> docker-machine ssh manager1 "docker swarm init --listen-addr $(docker-machine ip manager1) --advertise-addr $(docker-machine ip manager1)"
+
+4) Para olhar todos os nodes no cluster
+
+	> docker-machine ssh manager1 "docker node ls"
+	ID				HOSTNAME	STATUS	AVAILABILITY	MANAGER	STATUS
+	vdn9193cy6z6fje4t4rhz0uli   *  	manager1	Ready	Active		Leader
+	
+5) Pegando o token do manager
+
+	> docker-machine ssh manager1 "docker swarm join-token manager -q"
+
+		SWMTKN-1-69xxr2r8bvm1wvlt3ylunvx70nc2yl5ar24fsyr9dg46ac4bp5-awktakab3019ciq0tfkblgfur
+
+6) Podemos tambem retornar o token do worken
+	
+	> docker-machine ssh manager1 "docker swarm join-token worker -q"
+
+
+7) Agora na docker-machine2 vamos fazer ela se juntar ao swarm com a docker-machine1 que é o host
+
+	> docker-machine ssh manager2 	\
+		"docker swarm join 	\
+		--token 'docker-machine ssh manager1 "docker swarm join-token manager --q"'   \
+		--listen-addr $(docker-machine ip manager2) \
+		--advertise-addr $(docker-machine ip manager2) \
+		$(docker-machine ip manager1)"
+
+		-> This node joined a swarm as a manager
+
+	> docker-machine ssh manager1 "docker node ls"
+	ID				HOSTNAME	STATUS	AVAILABILITY	MANAGER	STATUS
+	ptrvk0jf8rb89whoy2unq690s	manager2	Ready	Active		Reachable
+	vdn9193cy6z6fje4t4rhz0uli   *  	manager1	Ready	Active		Leader
+	
+8) Agora vamos adicionar a docker-machine manager3 ao Swarm junto a docker-machine1
+
+	> docker-machine ssh manager3 	\
+		"docker swarm join 	\
+		--token 'docker-machine ssh manager1 "docker swarm join-token manager --q"'   \
+		--listen-addr $(docker-machine ip manager3) \
+		--advertise-addr $(docker-machine ip manager3) \
+		$(docker-machine ip manager1)"
+
+	> docker-machine ssh manager1 "docker node ls"
+	ID				HOSTNAME	STATUS	AVAILABILITY	MANAGER	STATUS
+	0q925z6bl0e2wecfa35cvhvy5	manager3	Ready	Active		Reachable
+	ptrvk0jf8rb89whoy2unq690s	manager2	Ready	Active		Reachable
+	vdn9193cy6z6fje4t4rhz0uli   *  	manager1	Ready	Active		Leader
+ 		
+	Obs: eles tem que se juntar ao manager1, pelo fato do manager1 ser o lider
+
+8) Agora vamos adicionar um worker node ao swarm
+
+	> docker-machine ssh worker1	\
+		"docker swarm join 	\
+		--token 'docker-machine ssh manager1 "docker swarm join-token manager --q"'   \
+		--listen-addr $(docker-machine ip worker1) \
+		--advertise-addr $(docker-machine ip worker1) \
+		$(docker-machine ip manager1)"
+
+		-> This node joined a swarm as a worker
+
+	> docker-machine ssh manager1 "docker node ls"
+	ID				HOSTNAME	STATUS	AVAILABILITY	MANAGER	STATUS
+	0q925z6bl0e2wecfa35cvhvy5	manager3	Ready	Active		Reachable
+	ptrvk0jf8rb89whoy2unq690s	manager2	Ready	Active		Reachable
+	vdn9193cy6z6fje4t4rhz0uli   *  	manager1	Ready	Active		Leader
+
+9) O mesmo para os outros dois
+
+	> docker-machine ssh worker2	\
+		"docker swarm join 	\
+		--token 'docker-machine ssh manager1 "docker swarm join-token manager --q"'   \
+		--listen-addr $(docker-machine ip worker2) \
+		--advertise-addr $(docker-machine ip worker2) \
+		$(docker-machine ip manager1)"
+
+		-> This node joined a swarm as a worker
+
+
+		> docker-machine ssh worker3	\
+		"docker swarm join 	\
+		--token 'docker-machine ssh manager1 "docker swarm join-token manager --q"'   \
+		--listen-addr $(docker-machine ip worker3) \
+		--advertise-addr $(docker-machine ip worker3) \
+		$(docker-machine ip manager1)"
+
+		-> This node joined a swarm as a worker
+
+10) E o paranoma final fica:
+
+	> docker-machine ssh manager1 "docker node ls"
+	ID				HOSTNAME	STATUS	AVAILABILITY	MANAGER	STATUS
+	0q925z6bl0e2wecfa35cvhvy5	manager3	Ready	Active		Reachable
+	jy1vgsechlcuspfulstjytuqr	worker3		Ready	Active		
+	ptrvk0jf8rb89whoy2unq690s	manager2	Ready	Active		Reachable
+	slaittbplctqqbgksclsgm6cf	worker2		Ready	Active		
+	t5z76yxrc1jrs12jdacb3xma1	worker1		Ready	Active		
+	vdn9193cy6z6fje4t4rhz0uli   *  	manager1	Ready	Active		Leader
+
+
+11) Pegando a infor do docker
+
+	> docker-machine ssh manager1 "docker info"
+		.
+		.
+		.
+	  Swarm: Active
+	  Is Manager: true
+	  ClusterID: gic8853pevl5ja9pwpi7h77l
+	  Manager: 3
+	  Nodes: 6
+	  Orchrestation:
+	    Tasks History Retention Limit: 5
+
+
+
+
+
+SWARM MODE: REPLICATED SERVICE
+=======================================================================
+
+Há dois tipos de serviços: Global Service
+			   Replicated Service
+
+- Replicated Service
+
+	> docker service create --replicas 3 --name web jboss/wildfly
+
+- Global Service:   
+	
+	Un serviço unico que vai rodar em cada node
+
+
+
+SWARM MODE: ROUTING MESH
+------------------------------------
+
+- Swarm mode possuem load balancer.
+
+- Load Balancers são host-aware, not container-aware.
+
+- Swarm mode introduz o container-aware routing mesh.
+
+- Ele rerout traffic de qualquer host para um container.
+	* Reserve a swarm-wide ingress port
+	* Uses DNS-based services discovery
+- Comando
+
+	> docker service create --replicas 3 --name web -p 8080:8080 jboss/wildfly
+
+
+
+EXEMPLO PRATICO
+----------------------------------------------------------------------
+
+- Vamos pegar verificar as docker-machines
+
+	> docker-machine ls
+
+		NAME		ACTIVE 		DRIVER		STATE	URL				SWARM	DOCKER	ERROS
+		manager1	-		virtualbox	Running	tcp://192.168.99.100:2376		v1.13.1
+		manager2	-		virtualbox	Running	tcp://192.168.99.101:2376		v1.13.1
+		manager3	-		virtualbox	Running	tcp://192.168.99.102:2376		v1.13.1
+		worker1		-		virtualbox	Running	tcp://192.168.99.103:2376		v1.13.1
+		worker2		-		virtualbox	Running	tcp://192.168.99.104:2376		v1.13.1
+		worker3		-		virtualbox	Running	tcp://192.168.99.105:2376		v1.13.1
+
+- Vamos requisitar que essa docker-machine seja a manager, o prompt vai mudar e vamos esta 
+  praticamente meio que logado nessa docker-machine
+
+	> docker-machine ssh manager1
+
+- Uma vez na mamager1, vamos criar um serviço
+
+	> docker service create --name web --replicas 3 -p 8080:8080 jbos/wildfly
+
+- Checando os serviços 
+
+	> docker service ls
+	ID		NAME	MODE		REPLICAS  	IMAGE
+	zjcjrp351baf	web	replicated	3/3		jboss/wildfly:latest
+
+- Para pegar mais detalhes vamos da um inspect
+
+	> docker service inspect web
+
+- Cada replica é associada a uma task. Uma task é associada a um container, para ver as replicas
+
+	> docker service ps
+	ID		NAME	IMAGE			NODE		DESIRED	STATE	CURRENT	STATE			ERROR	PORTS
+	nf3q1fqziaov	web.1	jboss/wildfly:latest	manager3	Running		Running about aminut agos
+	vu3nbt2l3ua9	web.2	jboss/wildfly:latest	worker1		Running		Running about aminut agos
+	kqwu67rgxty5	web.3	jboss/wildfly:latest	worker2		Running		Running about aminut agos
+
+
+
+
+SWARM MODE: CONTAINER FAILURE
+----------------------------------------------------------------------------
+- Para exemplo de falha, vamos supor que o node manager3 
+
+- Bom estamos no manager1, então primeiro, vamos sair do node manager1
+
+	> exit
+
+- Vamos entrar no outro node, que será o manager3 
+
+	> docker-machine ssh manager3
+
+- Vamos ver a lista de containers que estão rodando
+
+	> docker container ls
+
+ 		ID 		NAME	MODE		REPLICAS	IMAGE
+		zjcjrp351baf	web	replicated	3/3		jboss/wildfly:latest
+
+	> exit
+
+- Vamos ver os serviçoa da docker node manager1
+
+	> docker-machine ssh manager1 "docker service ls"
+
+  		ID 		NAME	MODE		REPLICAS	IMAGE
+		zjcjrp351baf	web	replicated	3/3		jboss/wildfly:latest
+
+- Vamos apagar os containers
+
+	> docker-machine ssh manager "docker container rm -f 9cf0d323d307"
+
+- Apos matar um container, vamos checar as replicas
+
+	> docker-machine ssh manager1 "docker service ls"
+
+- Agora vamos ver as tasks, containers
+
+	> docker-machine ssh manager1 "docker service ps web"
+
+
+
+
+SWARM MODE:  SCALE
+--------------------------------------
+
+
+- COMANDO
+
+	> docker service scale <servico>=Numero de replicas
+
+	Ex:
+		> docker service web=6 		(vai pular de 3 para 6)
+
+
+
+SWAEM MODE: ROLLING UPDATE
+----------------------------------------
+
+- Aqui um exemplo para atualizar o serviço. O serviço em questão, vamos supor que seja o "web".
+  --image refere-se a nova imagem. O paramentro --parallelism 2 deiz que vamos da um update em 2
+  imagem em um tempo apontado. Já o paramentro --update-delay 10s vai fazer uma pausa de 10 segundos
+  após a imagem ser atualizada.
+
+	> docker service update web --image wildfly:2 --update-parallelism 2 --update-delay 10s
+
+
+
+
+
+EXEMPLO PRATICO
+-------------------------------------------------
+
+- Vamos checar os serviços no primary manager docker-machine
+
+	> docker-machine ssh manager1 "docker service ls"
+  		ID 		NAME	MODE		REPLICAS	IMAGE
+		zjcjrp351baf	web	replicated	3/3		jboss/wildfly:latest
+
+- Podemos pegar mais detalhes sobre o serviço web que tem 3 replicas rodando
+
+	> docker-machine ssh manager1 "docker service ps web"
+
+  		ID 		NAME	MODE			NODE	 STATE		CURRENT STATE
+		bxseb1h72ytg	web.1	jboss/wildfly:latest	worker3	 Running	35 minutes ago
+		nf3q1fqziaov	web.1	jboss/wildfly:latest	manager3 Shutdown	36 minutes ago	
+		348qs0xfm7rz	web.2	jboss/wildfly:latest	manager1 Running	33 minutes ago
+		vu3nbt2l3ua9	web.2	jboss/wildfly:latest	worker1	 Shutdown	34 minutes ago
+		kqwu67rgxty5	web.3	jboss/wildfly:latest	worker2	 Running	55 minutes ago
+
+- Podemos ver somente os container que estão rodando
+
+	> docker-machine ssh manager1 "docker service ps -f \"desired-state=running\" web"
+
+  		ID 		NAME	MODE			NODE	 STATE	 	CURRENT STATE
+		bxseb1h72ytg	web.1	jboss/wildfly:latest	worker3	 Running	35 minutes ago
+		348qs0xfm7rz	web.2	jboss/wildfly:latest	manager1 Running	33 minutes ago
+		kqwu67rgxty5	web.3	jboss/wildfly:latest	worker2	 Running	55 minutes ago
+
+- Vamos agora da um scale de 3 para 6 serviços
+
+	> docker service scale web=6
+	> docker-machine ssh manager1 "docker service ps -f \"desired-state=running\" web"
+
+  		ID 		NAME	MODE			NODE	 STATE		CURRENT STATE
+		bxseb1h72ytg	web.1	jboss/wildfly:latest	worker3	 Running	35 minutes ago
+		348qs0xfm7rz	web.2	jboss/wildfly:latest	manager1 Running	33 minutes ago
+		kqwu67rgxty5	web.3	jboss/wildfly:latest	worker2	 Running	55 minutes ago
+		yd9f6bmu3co2	web.4	jboss/wildfly:latest	manager2 Running	Preparing 5 minutes ago
+		vcm1z37j4wap	web.5	jboss/wildfly:latest	manager3 Running	4 minutes ago
+		go3s5ydnbgqo	web.6	jboss/wildfly:latest	manager3 Running	4 minutes ago
+
+	> docker-machine ssh manager1 "docker service ls"
+  		ID 		NAME	MODE		REPLICAS	IMAGE
+		zjcjrp351baf	web	replicated	6/6		jboss/wildfly:latest
+
+- Vamos agora remover o serviço de nome web
+
+	> docker service rm web 
+	> docker-machine ssh manager1 "docker service ls"
+  		ID 		NAME	MODE		REPLICAS	IMAGE
+
+
+- Vamos criar mais um nove serviço
+
+	> docker service create --name webapp --replicas 6 -p 8080:8080 arungupta/wildfly-app:1
+
+- Vamos ver o que nenhuma das replicas está rodando
+
+	> docker-machine ssh manager1 "docker service ls"
+  		ID 		NAME	MODE		REPLICAS	IMAGE
+		zjcjrp351baf	webapp	replicated	0/6		arungupta/wildfly-app:1
+
+- Vamos checar o andamentos dos serviços e constatar que as replicas estão em preparing, isso significa que elas aparentemente 
+  estão em processo de download
+
+	> docker-machine ssh manager1 "docker service ps webapp"
+
+  		ID 		NAME	MODE			NODE	 STATE		CURRENT STATE
+		bxseb1h72ytg	web.1	arungupta/wildfly-app:1	worker3	 Running	Preparing 30 minutes ago
+		348qs0xfm7rz	web.2	arungupta/wildfly-app:1	manager1 Running	Preparing 30 minutes ago
+		kqwu67rgxty5	web.3	arungupta/wildfly-app:1	worker2	 Running	Preparing 31 minutes ago
+		yd9f6bmu3co2	web.4	arungupta/wildfly-app:1	manager2 Running	Preparing 31 minutes ago
+		vcm1z37j4wap	web.5	arungupta/wildfly-app:1	manager3 Running	Preparing 32 minutes ago
+		go3s5ydnbgqo	web.6	arungupta/wildfly-app:1	manager3 Running	Preparing 32 minutes ago
+
+
+- Após um tempo se voltar a verificar os serviços vão está rodando
+
+	> docker-machine ssh manager1 "docker service ls"
+  		ID 		NAME	MODE		REPLICAS	IMAGE
+		zjcjrp351baf	webapp	replicated	6/6		arungupta/wildfly-app:1
+
+
+- Vamos atualizar a imagem dos serviços webapp para a nova imagem arungupta/wildfly-app:2, quando listarmos
+  podemos ver o novo serviço
+
+	> docker service update webapp --image arungupta/wildfly-app:2  --update-parallelism 2 --update-delay 10s
+	> docker-machine ssh manager1 "docker service ls"
+  		ID 		NAME	MODE		REPLICAS	IMAGE
+		zjcjrp351baf	webapp	replicated	4/6		arungupta/wildfly-app:2
+
+
+
+
+REAL LIFE: MULTICONTAINER APP ON MULTIHOST CLUSTER
+---------------------------------------------------------------
+
+- Tipo motodo para building e deploying em real-world applications
+
+Exemplo:
+----------
+
+- Vamos ver os serviços que estão rodando
+
+	> docker-machine ssh manager1 "docker service ls"
+  		ID 		NAME	MODE		REPLICAS	IMAGE
+		zjcjrp351baf	webapp	replicated	0/6		arungupta/wildfly-app:2
+
+- Vamos remover esse serviço
+
+	> docker service rm webapp
+	> docker-machine ssh manager1 "docker service ls"
+  		ID 		NAME	MODE		REPLICAS	IMAGE
+
+
+- Vamos para o docker-machine manager1 e executar um comando para logar nele
+
+	> docker-machine ssh manager1
+	> pws
+	/home/docker
+
+- Nessa pasta vamos criar um docker-compose file
+
+	> vi docker-compose.yml
+	  -------------------------------------------
+	  version: '3'
+	  services:
+	    web:
+	      images: arungupta/couchbase-javaee:travel
+	      environment:
+		- COUCHBASE_URI=db
+	      ports:
+		- 8080:8080
+		- 9990:9990
+	      depends_on:
+	    	- db
+	 
+	    db: 
+	     image: argunpta/couchbase:travel
+	     ports:
+		- 8091:8091
+		- 8092:8092
+		- 8093:8093
+		- 11210:11210
+	  -------------------------------------------
+
+- Vamos usar um novo comando "docker stack", este é o comando que vamos usar para fazer o deploy de multiplos
+  containers em multiplos hosts.
+
+	> docker stack --help
+
+
+		Options:
+			--C, --compose-file string 		Path to a Compose file
+			--help					Print usage
+			--with-registry-auth			Send registry authentication details to Swarm agents
+
+		COMMANDS:
+			deploy					Deploy a new stack or update an existing stack
+			ls					Lists stacks
+			ps					List the task in the stack
+			rm					Remove the stack
+			services				List the service in the stack
+
+
+- Vamos usar o docker-compose file que criamos mais acima para criar uma stack
+
+	> docker stack deploy --compose-file=docker-compose.yml webapp
+		
+		Creating network webapp_default
+		Creating service webapp_web
+		Creating service webapp_db
+
+- Vamos verificar se a stack foi criada
+
+	> docker stack ls 
+
+		NAME 	SERVICES
+		webapp	2
+
+
+- Esta stack produziu alguns servilos, vamos verifica-los
+
+	> docker service ls 
+  		ID 		NAME		MODE		REPLICAS	IMAGE
+		6jonbflhoew7	webapp_web	replicated	1/1		arungupta/couchbase-javaee:travel
+		yd9f6bmu3co2	webapp_db	replicated	1/1		arungupta/couchbase:travel
+
+
+- Vamos checar o serviços 
+
+	
+	> docker service ps webapp_web
+
+  		ID 		NAME	MODE					NODE	 STATE		CURRENT STATE
+		bxseb1h72yng	web.1	arungupta/couchbase-javaee:travel	worker3	 Running	Running 2 minutes ago
+	 
+
+- Bom, para continuar vamos sair do manger1 e logar na docker-machine worker3
+
+	> exit
+	> docker-machine ssh worker3
+
+- Vamos veridicar quantos container estão rodando
+
+	> docker container ls
+
+- Vamos logar de volta em manager1
+
+	> exit
+	> docker-machine ssh manager1
+
+- Checar a stack
+
+	> docker stack ls
+		NAME 	SERVICES
+		webapp	2
+
+
+- Bom agora vamos checar os clusts do swarm
+
+	> docker-machine ls
+
+		NAME		ACTIVE 		DRIVER		STATE	URL				SWARM	DOCKER	ERROS
+		manager1	-		virtualbox	Running	tcp://192.168.99.100:2376		v1.13.1
+		manager2	-		virtualbox	Running	tcp://192.168.99.101:2376		v1.13.1
+		manager3	-		virtualbox	Running	tcp://192.168.99.102:2376		v1.13.1
+		worker1		-		virtualbox	stopped						Unknown
+		worker2		-		virtualbox	Running	tcp://192.168.99.104:2376		v1.13.1
+		worker3		-		virtualbox	Running	tcp://192.168.99.105:2376		v1.13.1
+	
+- Para checar o serviço do db
+	
+
+	> curl http://$(docker-machine ip manager1):8080/airlines/resources/airlines
+	
+		=> 
+		   [{"travel-sample":{"country":"United States","iata":"Q5","callsign":"MILE-AIR", "name": "40-Mile Air","ico":"MLA","id":10,"type":"airline"}}, ...
+
+
+- Eliminar os servilos e a network criada na stack, bas eliminar a stack que tudo será removido
+
+	> docker stack rm webapp
+
+
+
+
+
+
+
+SWARM MODE: DRAIN NODE
+--------------------------------------------------------------------------------------------
+
+
+- Vamos supor que temos um 6 cluster nodes rodadando e queremos atualizar o node para mudar o sistema operacional
+  adionar mais memoria, mais cpu, attach ssd e essas e outras razoes queremos o node out.
+
+  Este comando abaixo é usado nesses casos:
+
+	> docker node udate --availability drain <nodename>
+
+  Quando voce utiliza esse comando, e a mesma coisa de dize: "seu container não está mais disponivel neste node"
+  O swarm então entra em cena e checa o disered number e reschedule o container em outros nodes
+
+
+- Em alguns casos você pode nao querer o container reschedule, e voce pode querer simplesmente colocar o containe off line
+  para que voce tenha a habilidade de debugar o container estando em produção
+
+	> docker node update --availablility pause <nodename>
+
+  Nesse caso o container continuar sendo executado, mas sem a habilidade de ser rescheduled em outro node, e voce pode 
+  fazer um debug do container como se estive em produção:
+ 
+- Quando voce termina a manutençao do container, podemos traze-lo de volta a produção com o seguinte comando
+
+	> docker node update --availability active <nodename>
+
+
+
+
+
+SWARM MODE: LABELS
+-----------------------------------------------------------------------------------------------
+
+- Label pode ser definidas para nodes para que possam ser identificados por suas caracteristicas
+  indicando tipo de serviço, imagem, tipo de memoria etc..
+
+	DOCKER_OPTS="--label=wildfly.storage=ssd"
+
+- Podemos usar o serviços de Labels com Constraints, podemos por exemplo scale serviços. A constraint será somente replicar os serviços
+  onde os nodes tenham labels igual a condição
+
+	> docker service create --replicas=3  --name=web  --constraint engine.labels.wildfly.storage==ssd jboss/wildfly
+
+  Mesmo se voce, vai replicar serviços de containers, eles serão replicados em node que não tenham labels
+
+	> docker service create --replicas --namebd couchbase
+
+
+
+
+
+SWARM MODE: GLOBAL SERVICE
+--------------------------------------------------------------------------------------------------
+
+- Rodar um serviço com uma simples instancia em cada cluster
+
+
+	> docker service create --mode=global --name=prom /prom/prometheus
+
+
+
+
+
+
+
+
+
+CRIANDO DOCKER SWARM NO AWS - TEMPLATE CLAUDFORMATIONS
+-----------------------------------------------------------------
+
+- Template:
+
+	https://editions-us-east-1.s3.amazonaws.com/aws/stable/Docker-no-vpc.tmpl
+	
+- Instruções
+
+	https://docs.docker.com/docker-for-aws/
+
+- Docker for AWS IAM permissions
+
+	https://docs.docker.com/docker-for-aws/iam-permissions/
+
+
+
+
+
+COUCHBASE CLUSTER USING DOCKER SERVICE
+-------------------------------------------------------------------------------
+
+
+Repo:
+	https://github.com/arun-gupta/docker-images/tree/master/couchbase   -> Dockerfile
+
+Lista completa de arquivos na pasta: Image
+
+
+		Este Docker file usa uma arquivo de script configure-node.sh que é copiado e executado no container
+
+  		Dockerfile
+		----------------------------------------------------------------------------------------------------
+		FROM couchbase:latest
+
+		COPY configure-node.sh /opt/couchbase
+
+		#HEALTHCHECK --interval=5s --timeout=3s CMD curl --fail http://localhost:8091/pools || exit 1
+
+		CMD ["/opt/couchbase/configure-node.sh"]
+		----------------------------------------------------------------------------------------------------	
+
+
+		Este é o arquivo de script referenciado acima no Dockerfile
+
+		configure-node.sh
+ 		----------------------------------------------------------------------------------------------------	
+		#!/bin/bash
+
+		set -x
+		set -m
+
+		/entrypoint.sh couchbase-server &
+
+		sleep 15
+
+		# Setup index and memory quota
+		curl -v -X POST http://127.0.0.1:8091/pools/default -d memoryQuota=300 -d indexMemoryQuota=300
+
+		# Setup services
+		curl -v http://127.0.0.1:8091/node/controller/setupServices -d services=kv%2Cn1ql%2Cindex
+
+		# Setup credentials
+		curl -v http://127.0.0.1:8091/settings/web -d port=8091 -d username=Administrator -d password=password
+
+		# Setup Memory Optimized Indexes
+		curl -i -u Administrator:password -X POST http://127.0.0.1:8091/settings/indexes -d 'storageMode=memory_optimized'
+
+		# Load travel-sample bucket
+		#curl -v -u Administrator:password -X POST http://127.0.0.1:8091/sampleBuckets/install -d '["travel-sample"]'
+
+		echo "Type: $TYPE"
+
+		if [ "$TYPE" = "WORKER" ]; then
+		  echo "Sleeping ..."
+		  sleep 15
+
+		  #IP=`hostname -s`
+		  IP=`hostname -I | cut -d ' ' -f1`
+		  echo "IP: " $IP
+
+		  echo "Auto Rebalance: $AUTO_REBALANCE"
+		  if [ "$AUTO_REBALANCE" = "true" ]; then
+		    couchbase-cli rebalance --cluster=$COUCHBASE_MASTER:8091 --user=Administrator --password=password --server-add=$IP --server-add-username=Administrator --server-add-password=password
+		  else
+		    couchbase-cli server-add --cluster=$COUCHBASE_MASTER:8091 --user=Administrator --password=password --server-add=$IP --server-add-username=Administrator --server-add-password=password
+		  fi;
+		fi;
+
+		fg 1
+		----------------------------------------------------------------------------------------------------	
+
+
+Arquivos do capitulo 5 deste curso
+---------------------------------------------
+
+1) Vamos checar o status do servidor
+
+	> docker info 
+		.
+		.
+		.
+		Swarm: inactive
+		.
+		.
+		.
+		Experimental: true
+		.
+		.
+		.
+
+2) Vamos ativar o serviço swarm
+
+	> docker swarm init
+
+3) Vamos criar a network como overlay
+
+	> docker network create -d overlay couchbase
+		5ia08c48p17xpspe7xqgem91x
+
+4) Vamos verificar
+
+	> docker network ls
+
+		NETWORK ID		NAME			DRIVER		SCOPE
+		57b13d04ec4b		bridge			bridge		local
+		5iao8c48p17x		couchbase		overlay		swarm
+		7381684d5f37		docker_gwbridge		brige		local
+		498e31928f61		host			host		local
+		ce7738tz5bqm		ingress			overlay		swarm	
+		32b40e53cc68		none			null		local
+
+5) Criando o servico
+
+	> docker service create --name couchbase-master --replicas=1 --network couchbase -p 8091:8091 -e TYPE=MASTER  arunguota/couchbase
+
+6) Vamos ver os serviços
+
+	> docker service ls
+
+		ID 		NAME			MODE		REPLICAS	IMAGE
+		k0kvbo8mboxf	couchbase-master	replicas	1/1		arungupta/couchbase:latest
+
+7) Checando o serviço no browser
+
+	loalhost:8091/ui/index.html#/
+
+8) Se o serviço não esta totalmente operacional temos que ir para o log no terminal e checar o que aconteceu
+
+	> docker service log couchbase-master -f
+
+9) Se o serviço estiver ok, vamos da login com Admin
+
+
+
+10) Vamos agora criar mais um serviço, desta vez como WORKER e também vai ser preciso criar mais uma variavel de ambiente
+    indicando o master, que será o serviço no cluster master enetwork -e COUCHBASE_MASTER=couchbase-master.couchbase
+    vamos tambem indicar que não queremos o AUTOBALANCE no start AUTO_BALANCE=false
+
+	> docker service create --name couchbase-worker --replicas=1 --network couchbase -e TYPE=WORKER -e COUCHBASE_MASTER=couchbase-master.couchbase -e AUTO_BALANCE=false   arungupta/couchbase
+
+11) Podemos verificar o serviço no console do couchbase na aba Server Nodes
+
+	localhost:8091/ui/index.html#/servers/active
+
+
+12) Ja que temos clusters, vamos ver como da um scale neles
+
+	> docker service scale cauchebase-worker=2
+	> docker service ls
+
+		ID 		NAME			MODE		REPLICAS	IMAGE
+		k0kvbo8mboxf	couchbase-master	replicas	1/1		arungupta/couchbase:latest
+		vqgojc00j1vt	couchbase-worker	replicas 	2/2		arungupta/couchbase:latest
+
+13) Vamos checar os logs
+
+	> docker service logs couchbase-worker -f
+
+
+12) Podemos verificar o serviço no console do couchbase na aba Server Nodes, e no notão Rebalance vamos reorganizar os nodes
+
+	localhost:8091/ui/index.html#/servers/active
+
+
+13) Para remover os servilos 
+
+	> docker service rm console-worker couchbase-master
+	> docker service ls
+
+		ID 		NAME			MODE		REPLICAS	IMAGE
+
+14) Agora remover a rede
+
+
+	> docker network rm couchbase
+
+
+
+     					S T O R A G E 
+					=============
+
+
+
+IMPLICIT PER-CONTAINER STORAGE
+--------------------------------------------------------------------------
+
+- É um implicito sandbox para cada container
+
+- O diretorio está em na pasta do host /var/lib/docker/volumes/   
+
+- O diretorio está indisponivel se o host crash ou for deletado
+
+- O diretorio não pode ser comparilhado com outros container
+
+
+
+EXPLICIT PER-CONTAINER STORAGE
+----------------------------------------------------------------------------
+
+- Volume é explicitamente criado
+
+- O diretorio nomeado é criado no host na pasta /var/lib/docker/volumes
+
+- O diretorio está indisponivel se o host crash ou for deletado
+
+- O diretorio não pode ser comparilhado com outros container
+
+
+
+PER-CONTAINER STORAGE
+----------------------------------------------------------------------------
+
+- Dados sao armazenados em um diretorio nomeado no host
+
+- Diretório está disponivel mesmo se o container caier ou for deletado
+
+- Multiplos containers podem ler/escrever no volume
+
+- Qualquer mudança no volume são serão parte da imagem
+
+
+
+SHARED-HOST STORAGE
+----------------------------------------------------------------------------
+
+- Distributed Storage inclue filesystem distribuida tais como Ceph, GlusterFS e network file system
+
+- Consiste em namear e a namespace prove armazenagem indefinida para containers atraves de multiplos hosts
+
+- Multiplos pontos estão dispoiveis em todos os nodes
+
+- Diretorio continua disponivel se o container cair ou for deletado
+
+- Diretorio estpa disponivel se o host cair
+
+- Multiplos container podem ler/gravar no volume
+
+
+
+
+Persistent Containers
+----------------------------------------------------------------------------------------------------------------------------------------------------
+				  Implicit		  Explicit		Pré-Host		Multiplehost
+				Pré-Container 		Pré-Container		
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+What?				Default sandbox		Explicit volume		Directory on the host	Storage on distributed file system
+----------------------------------------------------------------------------------------------------------------------------------------------------
+Location			/var/lib/docker/	/var/lib/docker/	Mounted within 		Ceph, GlusterFS e NFS...
+				volumes on the host	volumes on the host	the container	
+----------------------------------------------------------------------------------------------------------------------------------------------------
+Container crash			Directory unavailable	Directory unavailable	    Yes				Yes	
+----------------------------------------------------------------------------------------------------------------------------------------------------
+Host crash			Directory unavailable	Directory unavailable	    No				Yes
+----------------------------------------------------------------------------------------------------------------------------------------------------
+Shared					No			No		 Yes (host only)	 Yes (cluster wide)
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+Exemplo:
+---------------------------
+
+1) vamos verificar quantos containers estão rodando
+	
+	> docker container ls
+
+2) Criando um container
+
+	> docker container run -d --name db arungupta/couchbase
+
+
+3) Vamos inspecionar o mount point do container 
+
+	> docker container inspect --format '{{jason .Mounts}}' db  | jq
+
+	[
+	  {
+		"Type": "Volume", 
+		"Name": "0662ac3997e095a07ba1...",
+		"Source": "/var/lib/docker/volumes/0662ac3997e095a07ba1.../data",
+		"Destination":, "/opt/couchbase/var",
+		"Drive": "local",
+		"Mode": "", 
+		"RW": true,
+		"Propagation": ""	
+	  }
+	]
+
+4) Em outro terminal vamos configurar o acesso para examinar os volumes 
+
+	> export PS1="$ "
+
+5) Vamos rodar um debian container no modo privileged porque precisamos de acesso a VM, 
+   --pid=host significa=entre no espaço apropriado da VM, 
+   nsenter
+   sh para rodar em shell
+	
+	> docker run -ti --privileged --pid=host debian nsenter -t 1 -m -u -i sh
+
+	/# ls /var/lib/docker/volumes
+	.
+	.
+	.
+	(Vai mostrar todos os volumes disponiveis no container)
+	.
+	.
+	.
+	metadata.db
+	/#
+
+
+6) agora de volta ao terminal anterior, vamos parar o container
+
+	> docker stop db
+
+
+7) Em seguida vamos volta ao terminal que configuramos e olhar o volume que foi mostrado no inspect 
+   "Source": "/var/lib/docker/volumes/0662ac3997e095a07ba1.../data". 
+   Vamos observar que o container foi parado e podemos ver que o volume ainda existe
+
+
+	/# ls "Source": /var/lib/docker/volumes/0662ac3997e095a07ba1.../data
+
+		lib
+
+
+8) De volta no outro terminal anterior, podemos deletar o container e com a opção -v podemos apagar os volumes associados a ele
+
+	> docker rm -v db
+
+
+9) Se voltarmos ao container ativo na outra aba e repetir o comando vamos notar que o volume vai desaparecer
+
+
+	/# ls "Source": /var/lib/docker/volumes/0662ac3997e095a07ba1.../data
+		
+		No such file or directory 
+
+	
+10) Vamos criar um Explicit Storage
+
+	> docker volume create my_couchbase
+
+11) Se voce voltar para o terminal que esta usando o termina e checar
+
+	
+	/# ls /var/lib/docker/volumes
+	.
+	.
+	.
+	(Vai mostrar todos os volumes disponiveis no container)
+	.
+	.
+	.
+	metadata.db
+	my_couchbase
+	/#
+
+
+12) Como usar esse volume e usar o volume?Para isso vamos inicializar o container e monta-lo
+
+ 	> docker container run -d --name db -v my_couchbase:/opt/couchba/var arungupta/couchbase
+
+13) Vamos inspecionar o mount point do container novamente e vamos perceber que desta vez a Destination
+    continua com o mesmo valor no parametro. Porém o parametro source teve o nome do volume especificado
+    como couchbase
+
+	> docker container inspect --format '{{jason .Mounts}}' db  | jq
+
+	[
+	  {
+		"Type": "Volume", 
+		"Name": "0662ac3997e095a07ba1...",
+		"Source": "/var/lib/docker/volumes/my_couchbase/data",
+		"Destination":, "/opt/couchbase/var",
+		"Drive": "local",
+		"Mode": "", 
+		"RW": true,
+		"Propagation": ""	
+	  }
+	]
+
+
+
+14) Agora vamos remover o container e o volume a força com o parametro -fv
+
+	> docker container rm -fv db
+
+15) Vamos checar os volumes e vamos perceber ele ainda continua lá, o comando removeu o mapeamento do volume 
+    mas, ele ainda continua lá
+
+	/# ls /var/lib/docker/volumes
+	.
+	.
+	.
+	metadata.db
+	my_couchbase
+	/#
+
+16) Para eliminar o volume, precisamos especificamente aplicar o comando para elimina-lo
+
+	> docker volume rm my_couchbase
+
+17) Vamos rodar o container só que dessa vez vamos mapear o volume com pwd onde o container está armazenado e tambem expor a porta 8091
+
+	> docker container run -d --name db -v 'pwd':/opt/couchbase/var -p 8091:8091 arungupya/couchbase
+
+18) No browse rode o container, vai levar um tempo ate que o container surja
+
+	localhost:8091
+	
+	Login: Administrator
+	Password: password
+
+19) Podemos criar um banco na aba Data Buckets -> Create New Data Bucket
+
+20) No terminal podemos parar o container e tambem remove-lo
+
+	> docker container stop db
+	> docker container rm db 
+
+21) Vamos iniciar o container novamente da mesma forma
+
+	> docker container run -d --name db -v 'pwd':/opt/couchbase/var -p 8091:8091 arungupta/couchbase
+
+22) Apos o container entrar no ar, podemos constatar que o volume ainda vai está lá
+
+	localhost:8091
+	login: Administrator
+	password: password
+
+	Data Buckets
+
+
+
+DOCKER VOLUME PLUGINS
+---------------------------------------------------------------------
+
+	- Baterias são inclusas mas substituiveis
+
+	- Inclui default drivers para volumes hosted-based
+
+	- Habilita containers para ser integrados com um storage system externo
+		* Tipicamente estes plugins permitem usar Storage como Amazon EBS, Azure Storage e GCE Persistent Disk
+
+
+Como funcionam
+======================
+
+
+	Docker Volume Plugin					Docker
+							+---->	Back End
+		Docker		   Docker 	 	|
+		Client   -------->  Host(local)		|
+				       |		|
+				       +		+---->	Storage
+	    	Plugin		     Plugin		|	Back End
+	 	Client   --------->  Deamon ---------->	|
+							|
+							+---->	Storage
+							|	Back End
+							|
+							|
+							+---->	Storage
+								Back End
+
+
+
+O Que vamos usar
+-------------------------
+
+	- Vamos usar Dock Volume plugin ou Portworx
+
+	- Portworx é fácil de fazer deploy de container data services
+
+	- Quando pessamos em fazer deploy de container que tem dados, vamos usar portworx
+	  Porque ele é persistente, replication, snapshots e encription e muito mais funcionalidades 
+
+	- Por quê portworx
+	  Ele permite volumes granulares em container, ou seje, podemos pegar varios EBS pro host e agregar a capacidade
+
+	  	* Container granular volumes
+
+		* Cross-availability zone HA
+
+		* Support for enterprise data operations
+
+		* Ease of deploymente and provision
+
+- Docker Volume Plugin					
+								
+		Docker		   Docker 	 	
+		Client   -------->  Host(local)		
+				       |		
+				       |		
+	    	Plugin		       +       portworx		
+	 	Client   --------->  PX-Dev ----------------->  Amazon EBS
+
+
+							
+
+
+Portworx Exemplo
+-------------------------------
+
+- Trabalhando com o container 	5.5 Docker Volume Plugin
+
+	=== Pre setup
+1) Vamos criar uma EC2 Instance no AWS
+
+	==== EC2 instance
+
+		. Ububtu 14.04, 'm3.large'
+		.. Add '8091' to inbound rules
+
+2) Vamos logar na instancia via terminal
+
+	> ssh -i ~/.ssh/arun-cb-west1.pem ubuntu@ec2-65-219-168-187.us.west1.compute.amazonaws.com
+
+3) Vamos verificar os containers da EC2, para mostrar que os containers estão rodando
+
+	> docker container ls
+
+3) Instalar docker
+
+	> sudo apt-get update
+	>curl -sSL https://get.docker.com | sh
+
+4) Habilitar não root acessar o docker
+
+	>sudo usermod -aG docker ubuntu
+
+5) Vamos depois da um logour e logar novamente para que as mudanças tenham efeito
+
+6) Vamos anexar um volume EBS a instancia
+
+		. Create 10G EBS volume
+		. Attach the volume to EC2 instance using instance id
+	
+
+
+	==== Px-dev
+	
+		In EC2 instance: 
+		
+		. Create 'etcd':
+		+
+		'''
+			docker container run -v /data/variable/etcd -p 4001:4001 -d portworx/etcd:latest
+		'''
+		+ 
+		. Make root mounted volumes shareable: 'sudo mount --make-shared Use 'lsblk' to check that the volume is attached to EC2 instance
+		. Start 'px-dev' container
+		+
+		'''
+		
+		docker container run  --restart=always  --name px --d --net=host --privileged=true \
+			-v /run/docker/plugins:/run/docker/plugins 	\
+			-v /var/lib/osd:/var/lib/osd:shared		\
+			-v /dev:/dev					\s
+			-v /etc/pwx:/etc/pwx				\
+			-v /opt/pwx/bin:/expor_bin:shared		\
+			-v /var/run/docker.sock:/var/run/docker.sock	\
+			-v /var/cores:/var/cores			\
+			-v /usr/src:/usr/src				\
+			-ipc=host					\
+			portworx/px-dev					\
+			-deamon -k ercd://localhost:4001		\
+			-c cluster1 -s /dev/svdf			\
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

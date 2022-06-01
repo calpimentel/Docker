@@ -1,0 +1,701 @@
+
+
+COMANDOS PRELIMINARES
+----------------------------------------------------------------
+
+Checando a versão do Docker
+
+	> docker info
+
+Checando as redes do docker
+
+	> docker networl ls
+
+		NETWORK ID		NAME			DRIVER		SCOPE
+		de1c04fef0f		bridge			bridge		local
+		b82c1ad840ed		docker_gwbridge		bridge		local		
+		30ab9c32a48c		host			host		local	
+		lj1pev2m9bb4		ingress			overlay		swarm	
+		a57b890623e9		name			null		local
+
+
+- Aplicações rodando em container, precisam acessar network especialmente para acessar a internet
+
+
+CONTAINER NETWORK MODEL
+--------------------------------------------------------------
+
+O Docker Container architecture é contruida em um conjunto de infraestrutura que é chamado de Container Networking Model (CNM).
+A filosoia do CNM é prover portabilidade de aplicações através de diversas estruturas. Este atinge um equilibrio para alçançar 
+aplicações portaveis e tambem extrai capacidades e funcionalidades especiais da infraestrutura.
+
+
+Docker Network = não necessariamente precisa ser a rede fisica, mas qualquer network que voce configura para se comunucar 
+		 com a fisica.
+
+Network Driver	Docker Network Drivers prover na verdade implementações que fazem a rede funcionar. Eles são pluggable e 
+		são drivers muito diferentes que podem ser usados para intercambio fácil para o suporte em diferentes casos de uso.
+
+		* Multiple Network Drivers: Native Networks Drivers são partes Nativas do Docker Engine e são providos pelo Docker.
+					    Há multiplas escolhas de drivers para escolher como por exemplo overlay networks ou 
+					    local brifges.
+
+		* Remote Network Drivers:   Remote Network Driver são network drivers criados para a comunicação com fornecedores
+				            diferentes. Estes drivers podem ser usaos para prover integração com 
+
+IPAM Driver	Docker tem um Driver API nativa de gerenciamente de IP que possibilita o uso de subnets ou endereço de IP 
+		para networks e endpoints casa nada tenha sido especificado. Endereços de IP podem também ser manualmente 
+		definidos através de network, container e comando que criam serviços. IPAM Drivers também existem para permitir
+		integração com as ferramentas existentes no IPAM.
+
+
+
+
+TIPOS DE DOCKER NETWORKS
+--------------------------------------
+
+1) BRIDGE NETWORK DRIVE
+  Permite conectar um container a uma LAN e outros containers. 
+
+	* É um tipo de network default do Docker
+
+	* É muito boa para a maioria dos casos
+
+2) HOST
+
+  Remove o isolamento de  network entre container e Host, isso significa que o container não mais fica
+  isolada da propria rede.
+
+	* Only one container (or aplicação no host) pode usar uma porta ao mesmo tempo
+
+	* Util para aplicações especificas, tais como um gerenciamenteo de containers que você quer rodar em cada host
+
+3) OVERLAY
+  Conecta multiple Docker Hosts (e seus containers) juntos e habilita Swarm
+
+	* Somente disponivel com Docker EE e Swarm habilitado
+
+	* Multiplas redes usando VXLAN
+
+4) MACVLAN
+  Define o endereço MAC, para aparece como um Host fisico
+
+	* Clona interfaces de Host para criar interfaces virtuaiis, que sao disponibilizada em um container
+
+	* Suporta conexão a VLANs
+
+
+5) NONE
+  Conecta o container a uma network isolada com somente container dentro
+
+	* Containers não podem se comunicar com nenhum outra rede ou networks devices
+
+6) Third-Party Network Plugins
+
+	* Infobox IPAM plugin
+
+	* Weave Net
+
+	* Contiv Network plugin
+
+
+
+Para saber mais: https://lnkd.in/gSTnAR6
+
+
+
+
+----------------------------------------------------------------------------------------------------------------------------
+CRIANDO UMA BRIDGE NETWORK (DEFAULT NO DOCKER)
+----------------------------------------------------------------------------------------------------------------------------
+Checando as networks podemos imediatamente perceber uma overlay network, ela é especifica do EE, em CE certamente
+não vamos encrontrar esse tipo de rede
+Observe tambem a primeira rede (bridge) que por default é automaticamenre criada usando o bridge driver
+
+	> docker network ls
+
+		NETWORK ID		NAME			DRIVER		SCOPE
+		de1c04fef0f		bridge			bridge		local
+		b82c1ad840ed		docker_gwbridge		bridge		local		
+		30ab9c32a48c		host			host		local	
+		lj1pev2m9bb4		ingress			overlay		swarm	
+		a57b890623e9		name			null		local
+
+
+Vamos da um inspect na bridge network
+
+	> docker network inspect bridge
+
+
+Obs: todas os containers que são rodados docker run são alojada na default nerwork
+
+
+Criando uma Network padrão (bridge) com o nome de app-net
+
+	> docker network create --driver bridge app-net
+
+Checando a network
+
+	> docker network ls 
+
+		NETWORK ID		NAME			DRIVER		SCOPE
+		a69b8840473b		app-net			bridge		local
+		de1c04fef0f		bridge			bridge		local
+		b82c1ad840ed		docker_gwbridge		bridge		local		
+		30ab9c32a48c		host			host		local	
+		lj1pev2m9bb4		ingress			overlay		swarm	
+		a57b890623e9		name			null		local
+
+
+Inspecionando, podemos ver que uma subnet diferente foi definada para essa rede
+
+	> docker network inspect app-net
+
+		.
+		.
+		.
+		"Id": "a69b8840473b080b3...",
+		"Created": "2018-08-03T07:09:36.262503843Z",
+		"Scope": "local", 
+		"Driver": "bridge", 
+		"EnableIPV6": false, 
+		"IPAM": {
+			"Driver": "default", 
+			"Options": {},
+			"Config": [
+				{
+					"Subnet": "172.19.0.0/16",
+					"Gateway": "172.19.0.1"
+				}
+			]
+		}, 
+		"Internal": false,
+		"Attachable": false, 
+		"Ingress": false, 
+		"ConfigFrom": {
+			"Network": ""
+		},
+		"ConfigOnly": false,
+		"Options": {},
+		"Labels": {}
+	     }
+	    ]
+
+
+Rodando uns containers nessa network, o alpine linux em ash shell 
+
+	> docker run -dti -name app1  --network app-net  alpine ash
+	> docker run -dti -name app2  --network app-net  alpine ash
+
+
+
+Checando 
+
+	> docker ps : grep alpine
+
+
+Inspecionando, vamos poder ver dois container rodadao nesta network com dois IP Addresses diferentes
+
+	> docker network inspect app-net
+
+		.
+		.
+		.
+		"Id": "a69b8840473b080b3...",
+		"Created": "2018-08-03T07:09:36.262503843Z",
+		"Scope": "local", 
+		"Driver": "bridge", 
+		"EnableIPV6": false, 
+		"IPAM": {
+			"Driver": "default", 
+			"Options": {},
+			"Config": [
+				{
+					"Subnet": "172.19.0.0/16",
+					"Gateway": "172.19.0.1"
+				}
+			]
+		}, 
+		"Internal": false,
+		"Attachable": false, 
+		"Ingress": false, 
+		"ConfigFrom": {
+			"Network": ""
+		},
+		"ConfigOnly": false,
+		"Containers": {
+			"56e7f2a0cef6ad34e7f82b16704730257dac1beaad027234cde28779cf43d1d": {
+			"Name": "app1", 
+			"EndpointID": "58d96f78f091b5df05a136c9d71nb0...e8",
+			"MacAddress": "02:42:ac:13:00:02",
+			"IPv4Address": "172.19.0.2/16",
+			"IPv6Address": ""	
+			}, 
+			"9927c8f5a74bce2e49f951ce7244e7f82b16704730257dac1beaad027234cde28779cf43d1d": {
+			"Name": "app2", 
+			"EndpointID": "1a3b1ebfc2005c0def4b3091b5df05a136c9d71nb0...e8",
+			"MacAddress": "02:42:ac:13:00:02",
+			"IPv4Address": "172.19.0.3/16",
+			"IPv6Address": ""	
+			}
+		}, 
+		"Options": {},
+		"Labels": {}
+	     }
+	    ]
+
+
+
+
+Checando se os container se comunicam, vamos entrar no container app1 e da um ping para comunicar com app2
+
+	> docker container attach app1
+
+		/# ping app2
+		/# ping www.docker.com
+
+		/# (CTRL+P)
+
+	> docker container attach app2
+
+		/# ping app2
+		/# ping www.docker.com
+
+
+Removendo os dois container
+
+	> docker container stop app1 app2
+	> docker container rm app1 app2
+
+E tambem vamos remover a app-net
+
+	> docker network rm ap-net
+
+Checando as networks vamos ver que a app-net se foi
+
+	> docker network ls
+
+		NETWORK ID		NAME			DRIVER		SCOPE
+		a69b8840473b		app-net			bridge		local
+		de1c04fef0f		bridge			bridge		local
+		b82c1ad840ed		docker_gwbridge		bridge		local		
+		30ab9c32a48c		host			host		local	
+		lj1pev2m9bb4		ingress			overlay		swarm	
+		a57b890623e9		name			null		local
+
+
+
+-----------------------------------------------------------------------------------------------------------------
+CRIANDO UMA OVERLAY NETWORK
+-----------------------------------------------------------------------------------------------------------------
+
+Checando as redes e lembrando se você estiver com o docker community edition, não vai encontrar de jeito algum uma
+overlay network, ela é criada na Enterprise Edition especialmente quando o Swarm é iniciado.
+
+	> docker network ls
+
+		NETWORK ID		NAME			DRIVER		SCOPE
+		a69b8840473b		app-net			bridge		local
+		de1c04fef0f		bridge			bridge		local
+		b82c1ad840ed		docker_gwbridge		bridge		local		
+		30ab9c32a48c		host			host		local	
+		lj1pev2m9bb4		ingress			overlay		swarm	
+		a57b890623e9		name			null		local
+
+
+
+Tambem podemos criar uma overlay network manualmente com o nome de app-overlay
+
+	> docker network create --driver overlay app-overlay
+
+
+Checando as redes
+
+	> docker network ls
+
+		NETWORK ID		NAME			DRIVER		SCOPE
+		ym83jskyeiys		app-overlay		overlay		swarm
+		a69b8840473b		app-net			bridge		local
+		de1c04fef0f		bridge			bridge		local
+		b82c1ad840ed		docker_gwbridge		bridge		local		
+		30ab9c32a48c		host			host		local	
+		lj1pev2m9bb4		ingress			overlay		swarm	
+		a57b890623e9		name			null		local
+
+
+Bom, com swarm, que é o tipo de rede overlay, vamos fazer o deploy de um serviços nginx na rede app-overlay e com 6 replicas
+
+	> docker service create --network=app-overlay  --name=app1  --replicas=6  nginx
+
+
+checando os serviços para ver se o serviço app1 foi criado
+
+	> docker services ls
+
+		ID		NAME			MODE		REPLICAS		IMAGE				PORTS
+		l7izfjukommx	app1			replicated	3/6			nginx:latest
+		odd5auqxwdbl	ucp-agent-win		global		0/0			docker/ucp-agent-win:3.0.3
+		wL3SR7I4Q8DS	ucp-agent		global		3/3			docker/ucp-agenT:2.0.3
+		Ynmpox4arsky	ucp-agent-s390x		global		0/0			docker/ucp-agent-s390x:3.0.3
+
+Checando somente a app1
+
+	> docker ps | grep app1
+
+		d2ad2c9474d7	nfinx:latest		"nginx -g 'deamon ..."	30 seconds ago	Up 26 seconds 	80/tcp	app1.1.amuz6gk8pfpag5njuzgfx6b
+		9421090f902f	nfinx:latest		"nginx -g 'deamon ..."	30 seconds ago	Up 26 seconds 	80/tcp	app1.4.kjjitozxt4hfc3szs62gehizis
+
+
+
+
+PUBLISH PORTS
+-------------------------------------------------------------
+
+- Por default container são conectados pela bridge network a uma rede fisica do host
+
+- E por default, container tem acesso externo a rede mas sem acesso interno a rede
+
+- Portas devem ser publicadas para da acesso interno a network
+
+Docker documentação:
+			https://docs.docker.com/engine/reference/run/#expose-incoming-ports
+
+
+
+PARAMETROS 
+
+	--expose=[PORT]		Expoe a porta ou uma faixa de portas dentro do container
+
+	-P			Publica todas as portas expostas a uma interface de host
+
+	-p=[PORT]		Publica uma porta de container ou uma faixa de portas para o host
+					uso:
+						 ip:host:Port:ContainerPort   |  ip:containerPort  |  HostPort:con
+				Ambos, host e containerPorts podem ser especificados como uma faixa
+				de portas, Quando especificado as faixas para ambos, o numero de container ports 
+				da faixa deve bater com o numero de portas em um host, exemplo:
+
+					-p 1234:1236:1234-1236/tcp
+
+				Quando especificado a faixa de portas para um hostPort somente, 
+				o containerPort deve não ser uma range, Nesse caso o container port
+				é publicado em algum lugar com a faixa da hostPort especificado 
+
+				(use 'docker port' para ver o mapping real)
+
+	--link=""		Adicona um link para outro container (<name ou id>: alias ou <name ou id>)
+
+
+
+
+EXEMPLO
+-----------------------------------------------
+
+Rodando um container expondo uma porta dentro do container para o acesso externo (-d) rodando como deamon e -p para expor a porta 8080 do host
+mapeando para a porta 80 dentro do container
+
+	> docker container run -dit-p 8080  nginx
+
+Checando o container, vamos observar o ip 0.0.0.0:8080 que significa que qualquer ip pode ser direcionado para o mapeamento da porta 8080 
+do host e direcionando para a porta 80 do dentro do container.
+
+	> docker ps
+
+	CONTAINER		IMAGE		COMMAND				CREATED			STATUS		PORTS
+	f67e968d294		nginx		"nginx -g'deamon ..."		15 minutes ago		Up 14 seconds	0.0.0.0:8080->80/tcp
+
+
+podemos testar no browser passando o ip do hosr e a porta 8080
+
+	192.168.1.168:8080
+
+
+Vamos parar o contaniner
+
+	> docker container stop f67
+
+
+Vamos rodar novamenteo o mesmo serviço nginx, so que dessa vez vamos expor com -P 
+
+	> docker container run -dit -P nginx
+
+Checando o container vamos ver que ele exos a porta 32768 ou maior, agora quando acessamos esse container temos que lembrar
+qual foi a porta que foi designada pelo docker que pode ser 32678 ou outra a partir dessa
+
+
+	> docker ps
+
+	CONTAINER		IMAGE		COMMAND				CREATED			STATUS		PORTS
+	f67e968d294		nginx		"nginx -g'deamon ..."		7 minutes ago		Up 5 seconds	0.0.0.0:32768->80/tcp
+
+
+
+
+
+HOST PORT PUBLISHING
+---------------------------------
+
+- Tipicamente usada com o modo de serviço Global (Docker Global Mode Servis), neste modeo você vai roda apenas um simples
+  instancia em cada host no cluster, não mais e não menos, apenas um container em cada host do cluster 
+
+- Quando se usa um single host, você tem a opção de publicar uma unica porta em cada host network
+
+- Se voce for usar esse mode use o seguinte comando 
+
+	* mode=host
+
+INGRESS PORT PUBLISHING
+----------------------------------
+
+- Usada com serviço de replicação ( replicated mode servis)
+
+- Esse modo é default em serviços de replicação
+
+- É usado para publicar uma single port através de todos os hosts que estão no pool de containers
+
+
+	Documentação:
+			https://docks.docker.com/engine/swarm/ingess/#ingress/#bypass-the-routing-mesh
+
+
+
+DNS CONFIGURATION
+--------------------------------------------
+ 
+
+configurando o servidor do dns
+
+	> docker run -it --dns 192.168.1.254 centos /bin/bash
+
+	/]# ping esx3.company.pri			conseguiremos pingar o servidor 
+	/]# nslookup www.google.com			Tambem vamos encontrar o nslookup
+
+	/]# cat /etc/resolv.conf			Vamos olhar o endereço do servidor
+
+		-> 192.168.1.254			
+
+	/]# exit
+
+
+
+Vamos rodar novamente o container tirando a configuração do dns
+
+	> docker run -it  centos /bin/bash
+
+	/]# ping esx3.company.pri			Não conseguiremos pingar o servidor interno
+	/]# ping www.google.com				vamos encontrar o nslookup
+
+	/]# cat /etc/resolv.conf			Vamos olhar o endereço do servidor
+
+		-> 8.8.8.8				Desta vez vamos olhar um dns externo
+
+	/]# exit
+
+
+Tambem podemos especificar um DNS quando criamos uma network
+Uma outra forma de configurar o servidor que vai afetar todo o ambiente docker
+é no deamon.json file
+
+	> sudo nano /etc/docker/deamon.json
+
+		{
+		"dns": ["192.168.1.254"]
+		}
+
+
+	>  sudo systemctl restart docker		-> com o restart do docker
+
+Agora que ja especificamos o dns para a engine do docker, vamos rodar novamenre aquele container
+
+	> docker run -it  centos /bin/bash
+
+	/]# cat /etc/resolv.conf			Vamos olhar o endereço do servidor
+
+		-> 182.168.1.254			Desta vez vamos olhar um dns externo
+	/]# ping esx3.company.pri			conseguiremos pingar o servidor 
+	/]# exit
+
+
+
+
+LOAD BALANCING
+------------------------------------------------------------------------
+
+- Docker Swarm dá load balacind de workloads assim que é instanciado o swarm
+
+	http://docs.dockers.com/engine/swarm/ingress/#bypass-the-routing-mesh
+
+- Docker Swarm distribui a carga entre containers, escalar um novo workload é muito fácil
+  podemos mudar um parametro e distrubuir por exemplo de 100 para 200 workloads
+
+- Entretando, Swarm não tem scalonamento tradicionl de containers para dimensional scale up ou scala down
+  baseando-se na demanda.
+
+
+Checar Documentação sobre service discovery Universal Control Plane: 
+	https://success.docker.com/article/ucp-service-discovery
+
+
+
+
+
+
+
+
+NETWORKING USING THE HOST NETWORK
+----------------------------------------------------------------------------
+
+https//docs.docker.com/network/network-tutorial-host
+
+Neste tipo de congiguração não ha o que setar para funcionar, o docker usa diretamente a 
+network fisica do host
+
+Tambem não há portas para configurar e nenhum endereço e interface para ser traduzida
+
+O Comando para executar necessita que no parametro --network seja indicado como host
+
+	> docker run --rm -d --network host  --name my_nginx  nginx
+
+
+Exemplo de demonstração
+------------------------------
+
+Supondo que no host não haja nenhum container rodadndo, vamos rodar um com deamon -d, e coloca-lo na rede do host
+
+	> docker container run -d --network host nginx
+
+	> docker ps
+
+	CONTAINER		IMAGE		COMMAND				CREATED			STATUS		PORTS	NAME
+	f2fb7e968d294		nginx		"nginx -g'deamon ..."		7 minutes ago		Up 5 seconds		relaxad_lumiere
+
+
+Se vonce tentar export uma porta nao vai conseguir na, porque esse container está diretamente ligado a network do host
+
+	> docker container port relaxad_lumiere
+
+Vamos checar o ip adrss desse container
+
+	> ip addr
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+
+
+
+
+

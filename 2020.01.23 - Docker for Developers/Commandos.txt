@@ -1,0 +1,299 @@
+
+
+CRIANDO A REACT APP
+----------------------------------
+1) No vs code, vamos abrie um terminal e criar a app
+
+	> npx create-react-app exemplo
+
+2) Fechar o terminal e criar dois arquivos
+
+	* Dockerfile
+	* .dockerignore
+
+3) Preencher o Dockerfile
+
+	FROM node:10.0.0
+
+	RUN mkdir /usr/src/app
+	WORKDIR /usr/src/app
+
+	ENV PATH /usr/src/app/node_modules/.bin:$PATH
+
+	COPY package.json /usr/src/app/package.json
+	RUN npm install
+
+	CMD npm start
+
+4) Criar a imagem docker
+
+	> docker build -t react-example .
+
+5) Vamos rodar o container a partir da imagem
+
+	> docker run -ti --rm -v ${pwd}:/usr/src/app -v /usr/src/app/mode_modules -p 3000:3000 react-exammple
+
+
+6) Logando no Docker hub
+
+	> docker login --username=calpimentel
+
+7) Uma vez no logado no docker hub, antes de jogar a imagem pra la
+   verificar se a imagem tem tag
+
+	> docker images
+	REPOSITORY		TAG		IMAGE ID	CREATED		SIZE
+	react-example		latest		dfc2b682a46e	23 minutes ago	836MB
+
+8) Vamos agora colocar uma tag e criar um novo pepo e da um push
+
+	> docker tag dfc2b682a46e mannydesigns/react-example1
+	> docker push mannydesigns/react-example1
+
+
+DOCKER-COMPOSE FILE
+--------------------------------------------------------
+clear
+- Você pode iniciar um volume na linha de comando ou em um docker file
+
+- Vamos começar a trabalho com docker-compose file para facilitar
+  a configuração do ambiente.
+
+- Docker-compose file, permite configurar com apenas um arquivo, 
+  multiplos containers e então inicia-los comdo um comando
+
+
+1) Primeiro no projeto, vamos criar um novo arquivo
+
+	* docker-compose.yml
+  	-----------------------------------------------
+	version: '3.5'
+
+ 	services:
+
+	  react-app:
+	    container_name: app-react
+	    built:
+	      context: .
+	      dockergile: Dockerfile
+	    volumes:
+	      - '.:/usr/src/app'
+	      - '.:/usr/src/app/node_modules'
+	    ports:
+	      - '3000:3000'
+	    enviroment:
+	      - NODE_ENV=development
+  	-----------------------------------------------
+
+2) Agora no comando para executar o docker-compose que ja identifica o arquivo docker-compose.yml
+   e a opção up inicia os containers --build vai criar o container
+
+	> docker-compose up -d --build
+
+
+3) Para parar o container
+
+	> docker-compose stop
+
+
+
+BIND MOUNT VOLUMES
+------------------------------------------------------------
+
+- Bind Mount Volumes é o oposto de usar volumes
+  Secê precisa de dados persistentes no container, vamos usar volumes
+  Agora se você quiser se beneficiar do seu diretorio local, então vamos usar bind mount
+
+- Como funciona
+
+1) vamos criar um diretorio local no computador
+
+	> md data
+
+2) No projeto vamos criar um novo arquivo data.json
+
+	{
+		"firstName": "Manny",
+		"lastName": "Henri"
+	}
+
+3) No terminal vamos mapear o diretorio externo dentro do container. 
+
+	> docker run -d --mount type=bind,source=/Users/emmanuelhenri/Desktop/data, target=/var/data nginx
+	.
+	.
+	.
+	b341d85bfc32e73e42327499564d2c0ec33ab4c3d2c19d1d275fad54e00e57c3
+4) executamdo alguns comandos dentro do container
+
+	$ docker exec b3418 ls -ls /var/data
+	
+	total 4
+	4 -rw-r--r-- 1 root root 55 Sep 20 21:48 data.json
+
+
+C:\projetos-react\example\data
+	  
+C:\projetos-react\example\data\data.json
+
+
+
+
+
+
+
+
+PROCESSO DE AUTOMATIZAÇÂO
+-------------------------------------------------
+
+1) Criar no projeto um arquivo .travis.yml, que permitirá conectar ao repositorio
+
+	.travis.yml
+	-----------------------------------------------------
+	sudo requied
+	services:
+	  - docker
+
+	script:
+	  - docker build -t react-app .
+
+2) Vamos no docker file e remover o npm start, isso porque p .travis vai usar o docker 
+   para rodar a imagem
+
+	FROM node:10.0.0
+
+	RUN mkdir /usr/src/app
+	WORKDIR /usr/src/app
+
+	ENV PATH /usr/src/app/node_modules/.bin:$PATH
+
+	COPY package.json /usr/src/app/package.json
+	RUN npm install
+
+	----------> CMD npm start <---------------        Eliminar essa linha
+
+3) NO Github.com, vamos criar um novo repositorio
+
+	Repositori name
+	react-example
+
+	(x) public
+
+	( ) private 		-> pago
+
+
+4) Agorava vamos para trives e entrar com nossa conta github
+
+	https://travis-ci.org/getting_started
+
+5) Uma vez no travis vamos adicionar um repositorio
+
+	My Repositories +		-> Vamos clicar no simbolo do mais
+
+		Todos os repositorios publico e privados vão aparecer
+
+			localizar o repositorio a ser sincronizado e botão ligar
+
+6) No github vamos copiar o link local do repo  e no terminal vamos executar o comando
+
+	> git remote add origin git@ithub.com:mannyhenri/react-example.git
+
+7) Vamos fazer um commit e push do codigo para o master branch
+
+
+
+8) Apos isso vamos publicar a imagem, no .travis vamos implementa o codigo
+
+	.travis.yml
+	-----------------------------------------------------
+	sudo requied
+	services:
+	  - docker
+
+	script:
+	  - docker build -t mannydesigns/react-example2 .
+
+	beore_deploy:
+	  - docker login -u mannydesigns -p <digitat aqui a senha>
+	  - docker images mannydesigns/react-example2
+
+	deploy:
+	  provider: script
+	  script: docker push mannydesigns/react-example2
+	on:
+	  branch: master
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

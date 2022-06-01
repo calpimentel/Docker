@@ -1,0 +1,652 @@
+
+
+COMEÇADO
+----------------------------------------------------------------------------------------
+
+1) COncectar a uma VM
+
+	> docker info
+	> docker images ls
+
+2) Removendo todas as images
+
+	> docker images prune -a
+
+
+
+
+O QUE É UMA DOCKER IAMAGE
+----------------------------------------------------------------------------------------
+
+- Uma IMAGE é um pacote executável que inclui tudo que voce precisa para rodar uma aplicação.O codigo, 
+  o runtime, libraies, environment variables e confih files.
+
+- Fazemos um download de uma IMAGE para o docker instalado no seu ambiente de um REGISTRY da internet
+  ou de um private registry. Estas imagens sao READ ONLY
+
+- CONTAINEsR: É uma instancia de uma IMAGE. O container é simplismente uma imagem em ececução
+
+- Registry: Push=Ato de atualizar a imagem, fazendo o upload para o REGISTRY
+            Pull=Ato de fazer o download da IMAGE para o doceker host local
+
+- Backup: Podemos fazer o backup com as operações SAVE e LOAD para o arquivo backup.tar
+
+- Docker-file.yml : Conjunto de instruções para rodar no momento do build do container
+
+- EXECUÇÂO: Comandos run
+		     stop
+		     start
+		     restart
+
+
+
+DOCKER IMAGE LAYERS
+-----------------------------------------------------------------------------------------------
+
+- UMa das coisas para enterder é que docker images são contituidas de layers. Este layer file system
+  permite que o docker seja muito flexivel e eficiente
+
+- IMAGES são feitos de multiplos read-only layers. Multiplos containers são tipicamente baseados um mesma IMAGE.
+  Quando uma IMAGE é instanciada dentro de um container, uma writable layer é criada (a mesma é deletada quando   
+  quando o container é removido).
+  O docker realiza isso graças ao uso do storage driver que gerencia o conteudo de uma IMAGE LAYER e a WRITABLE CONTAINER LAYER.
+  Cada storage drive pode manipular implementações de forma distinta, mas todos os drives usam STACKABLE IMAGE LAYERS e  a 
+  estratgia Copy-on-write (CoW).
+
+
+
+DOCKER FILE
+--------------------------------------------------------------------------------------------------
+
+- UM docker file é um arquivo texto que contem todos que são necessários para criar uma dada imagem.
+  Um docker-fele é executado por um comando docker build
+
+
+Sintaxe:
+	Dockerfile 			automate the steps tod create a Docker image
+	
+	Introduction 
+		The docker-file is a configuration file that automates the stepes of creating  Docker Image.
+		Its is similar to a Makefile. Docker reads instructions from a Dockerfile to automate the steps
+		otherwise preformed manually to create an image. To build an image, create a file
+		called Dockerfile.
+
+		The Dockerfile describes the steps taken to assemble the image. When the dockerfile has been
+		created, call docker build command, using the path of directory that contains Dockerfile as 
+		the arguments
+
+	Synopsis
+		INSTRUCTION arguments
+	
+		For exemple:
+
+			FROM image
+
+
+
+
+
+DOCKER BUILD
+
+	docker buid [--add-host[=[]]] [--build-ag[=[]]] [--cache-from[=[]] [--cpu-share[=0]]
+		    [--cgroup-parent[[VGROU[=CIDP-PARENT]] [--help]  [--iidfileCIDFILE]
+		    [-f|--file[=PATH/Dockerfile]]  [-squash] [--compress]      Experimental  [--force-m]  [--isolaton[=default]]
+	            [--label[=[]] [--no-cache] [-q|quiet] [--pull]  [--compress]  [-q|--quiet]    [--rm[=true]] [-t|tag[=[]] ]
+		    [-m|--memory[=MEMORY]] [--memory-swap[=LIMIT]]   [--network[="default]]
+		    [--shm-size[=SHM-SIZE]]   [--cpu-periode[=0]]   [--cpu-quota[=0]   [--cpuse-cpus[=CPUSET-CPUS]]
+		    [--cpuset-mem[=CPUSET-MENS]]  [--target[=[]]    [--ulimit[=[]]  PATH | URL | -
+
+
+
+
+COMANDOS DOCKER FILE
+---------------------------------------------
+
+- ADD			Copia um arquivo dentro de um imagem mas suporta tar e remote URL
+
+- COPY			Copia arquivos para a imagem, é mas indicado que o ADD
+
+
+
+
+
+
+
+EXEMPLOS DOCKERFILE
+----------------------------------------------
+
+- Basico
+	--------------------------------------
+	# Nginx
+	#
+	# VERSION
+
+	FROM	ubuntu
+	
+	LABEL Description="This images is used to start the foobar executable" Vendor="ACME Products" Version="1.0"
+	
+	RUN apt-get update && apt-get install -y inotify-tolls nginx apache2 openshh-server
+
+	--------------------------------------
+
+	> docker build .				Constroi a imagem no diretorio onde está o docker-file.yml
+	> docker image ls				Checando a imagem criada pele tempo de criação
+	> docker image inspect				Podemos ver os elementos de criação da image
+	> docker image inspect | grep 883		Checa a imagem filtrando pele 3 primeiros digitos do id
+	> docker image history 883			Checar o historico da imagem, especialmente os comandos de criação do dockerfile
+
+
+
+
+
+
+
+
+DOCKER IMAGE COMANDS
+-----------------------------------------------------
+
+	docker image COMMAND
+
+	COMMANDS:
+
+		build					Build a image from a Dockerfile
+		history					Show the history of an image
+		import					Import the contents from a tarball to create a filesystem image
+		inspect					Display detailed information on one or more images
+		load					Load am image from a tar archive or SIDIN
+		ls					List images
+		prune					Remove unused images
+		pull					Pull an image or a repository from a registry
+		push					Push an image or a repository to a registry
+		rm					Remove one or more images
+		save					Save one or more images to a tar archive (streamed to STDOUT by default)
+		tag					Create a tag TARGET_IMAGE that refers to SOURCE_IMAGE
+
+
+Uso:
+
+- Listar as images
+pr
+	> docker image ls
+
+- Remover a image, o que podemos fazer pelo nome na tag ou com o id, ou até mesmo com os 3 primeiros caractes do id
+
+	> docker image rm 3ed
+	
+	Se a imagem estiver sendo usada por um container parado (stopped container), seguir procedimentos
+
+	> docker container ls -a			-> ver todos os container, inclusive os parados
+	> docker container rm i40			-> após idendificados, podemos remover o container parado
+	> docker container ls -a			-> checando se há mais algum parado
+	> docker image rm 3ed				-> agora podemos apagar o container que se recusou a ser apagado por
+							   causa da imagem, as vezes aparecem varias deleções de uma mesma imagem
+							   isso ocorre porque o comando está deletando as layers da imagem uma a 
+							   uma
+
+- Outra forma de apagar uma ou mais imagens
+	
+	> docker rmi <tag/id>
+	
+- Remove todas as imagens dangling image(criadas sem tags)
+
+	> docker image prune 
+
+- Remove todas imagem com no minimo 1 container com tag e sem tags
+
+	> docker images prune -a
+
+
+
+
+
+
+
+
+DOCKER IMAGE INSPECT
+----------------------------------------------------------------
+
+- Docker recomenda usar docker inspect ao invés de docker image inspect
+
+Exemples
+
+	> docker image inspect ubunt:laest  | more
+
+- Podemos direcionar para arquivo
+
+	> docker image inspect ubuntu:latest > ubuntu-inspect.txt
+	> nano ubunto-inspect.txt
+
+- O comando inspect tambem tem a opção format, onde podemos extrair elementos do inspect, por exemplo uma Id
+
+	> docker image inspect ubuntu:latest --format='{{.Id}}' 
+
+
+- Outro exemplo, podemos extrair os valores do config do container
+
+	> docker image inspect   ubuntu:latest  --fotmat="{{.ContainerConfig}}'
+
+- Tambem podemos separar o campo e valor em json, o exemplo abaixo mostra o host name
+
+	> docker image inspect ubuntu:latest  --format='{{json .ContainerConfig.Hostname}}'
+
+
+
+
+TAGS
+----------------------------------------------------
+
+- Tag podem ser usadas para identificar a versão de um sistema operacional ou versão da versão da aplicação que
+  voce construiu no ambiente docker
+
+- Aplicando o comando a uma image que não tem nenhuma imagem
+
+	> docker image tag 692 myapp:lastest
+
+
+- Colocando mais de uma tag, quando voce faz isso são exibidas mais de uma imagem com tags diferentes
+  mas se trata da mesma imagem
+
+	> docker image tag myapp:latest   nyapp:original
+
+- Colocando uma tag com o nome da imagem compasta do login e o proprio nome d imagem
+
+	> docker image tag ubuntu:latest   daviddavistx/ubuntu:latest 
+
+
+
+
+DOCKER FILE BUILD
+-------------------------------------------------------
+https://docs.docker.com/engine/reference/commandline/build/
+Cria um image a partir de um docker-file.yml
+
+
+
+Usase  
+	docker build  [OPTIONS]  PATH | URL | ~
+
+
+	OPTION: 
+
+		Name, shorthand		Default		Description
+		--add-host				Add a custom host-to-IP mapping (host:ip)
+		--build-arg				Set build-time variables
+		--cache-from				Images to consider as cache sources
+		--cgroup-parent				Optional parent cgroup for the container
+		--compress				Compress the build context using gzip
+		--cpu-period				Limit the CPU CFS (Completely Fair Scheduler) period
+		--cpu-quota				Limit the CPU CFS (Completely Fair Scheduler) quota
+		--cpu-shares , -c			CPU shares (relative weight)
+		--cpuset-cpus				CPUs in which to allow execution (0-3, 0,1)
+		--cpuset-mems				MEMs in which to allow execution (0-3, 0,1)
+		--disable-content-trust	true		Skip image verification
+		--file , -f				Name of the Dockerfile (Default is ‘PATH/Dockerfile’)
+		--force-rm				Always remove intermediate containers
+		--iidfile				Write the image ID to the file
+		--isolation				Container isolation technology
+		--label					Set metadata for an image
+		--memory , -m				Memory limit
+		--memory-swap				Swap limit equal to memory plus swap: ‘-1’ to enable unlimited swap
+		--network				API 1.25+ - Set the networking mode for the RUN instructions during build
+		--no-cache				Do not use cache when building the image
+		--output , -o				API 1.40+	Output destination (format: type=local,dest=path)
+		--platform				experimental (daemon)API1.32+	Set platform if server is multi-platform capable
+		--progress	auto			Set type of progress output (auto, plain, tty). Use plain to show container output
+		--pull					Always attempt to pull a newer version of the image
+		--quiet , -q				Suppress the build output and print image ID on success
+		--rm		true			Remove intermediate containers after a successful build
+		--secret				API 1.39+	Secret file to expose to the build (only if BuildKit enabled): id=mysecret,src=/local/secret
+		--security-opt				Security options
+		--shm-size				Size of /dev/shm
+		--squash				experimental (daemon)API 1.25+ 		Squash newly built layers into a single new layer
+		--ssh					API 1.39+	SSH agent socket or keys to expose to the build (only if BuildKit enabled) (format: default|[=|[,]])
+		--stream				experimental (daemon)API 1.31+		Stream attaches to server to negotiate build context
+		--tag , -t				Name and optionally a tag in the ‘name:tag’ format 
+		--target				Set the target build stage to build.
+		--ulimit				Ulimit options
+
+
+- Tambem podemos realizar BUILT usando GIT repositorios
+
+
+	> docker built https://github.com/docker/rootfs.git#container:docker
+
+- Tambem podemos usar o built com Tarball Context
+
+	> docker built http://server/context.tar.gz
+
+- Podemos colher o nome do arquivo via teclado
+
+	> docker built < dockerfile
+
+ Exemplo de alguns usages in action
+=====================================
+
+- Vamos supor que queremos expecificar o nome do docker file com D em caixa alta, no arquivo que está no diretorio corrente
+  ou no contexto corrente
+  
+	> mkdir dockertmp					-> vamos criar um diretorio temp no diretorio corrente
+	> cp Dockerfile   /dockertmp/dd-docker			-> vamos copiar o nosso Dockerfile para o diretorio temp com outro nome
+	> docker built -f ./dd-docker .				-> comando para criar a imagem, o comando executa bem rápido devido 
+						  	   	   a habilidade do docker de usar o cahe de outras imagens ja criadas.
+								   O ponto no final se refere ao BUILD CONTEXT
+
+	> docker built --no--cache=true  -f  ./dd-docker	-> com a opção de não utilizar cache, vai demorar um pouco mais
+								   para construir o cache
+
+	
+
+
+- Criando uma segunda versao da image, com -t para especificar uma tag ubuntu:v2
+
+	> docker buid -f dd-docker -t ubuntu:v2  .
+
+- Se olhar o historico da imagem criada, vamos poder perber multiplos layer, ter muitas layer nem sempres é muito eficiente
+
+	> docker image history ubuntu:v2
+
+- Para simplificar as layer, vamos checar a versão e ver se ha a opção experimental habilitada. 
+  no docker. Pode ser que as versões mais atuais que essas o comando que procuramos, squash ja não seja mais experimental e estja incorporado na 
+
+	> docker version
+
+	Sever:
+	  Version:	17.06.2-ee-6
+	  .
+	  .
+	  .
+	  Experimental: true
+
+- Simplificando o numero de layer com a opção squash
+
+	> docker built -f dd-docker --squash   -t ubuntu:v3
+	> docker image history ubuntu:v3
+
+
+
+
+DOCKER REGISTER
+---------------------------------------------------------------------------
+- Docker Registry é um stateless, High Scalable application que armazena e permite você distribuir imagens.
+  Os Docker Registries podem ser locais (private) ou cloudlo-based (private ou public)
+
+- Quando se trata especificamente de Registry do Docker, temos poucas opções:
+
+	* Docker Registry (local open-source registry)
+          é relativamente bem limitado recursos, mas dá conta de realizar o trabalho de armazer imagens no Registry
+ 	  Tem um configuração basica de registro, mas é uma boa opção gratuita para o docker
+
+	* Docker Trusted Registry (DTR): é parte do Docker EE
+	  é comercial com muitas caracteriscas e recursos 
+
+
+	* Docker Hub
+	  é um cloud based registry do Docker
+
+
+
+DEPLOY DOCKER LOCAL REGISTRY
+-------------------------------------
+Comando, -d rodar como deamon, -p porta 5000, --restart sempre restartar e --name, onde registry será o nome do registry ´
+e registry:2 é o nome da imagem
+
+	> docker run  -d   -p 5000:5000   --restart    --name registry registry:2
+
+Podemos ver o docker registry rodando
+
+	> docker ps
+
+	CONTROL ID	IMAGE			COMMAND				CREATED		STATUS		PORT			NAMES
+	7f63faee66bc	registry:2		"/entrypoint.sh /e..."		9 seconds ago	Up 9 seconds 	0.0.0.0:5000->5000/tcp	registry
+	944a1d0296af	docker/ucp-agent:2.2.5	"/bin/ucp-agent agent"		2 hours ago	Up 2 hours	2376/tcp		upc-agent.01jj57tei24drik...
+	f4751800f731	docker/ucp-agent:2.2.5	"/bin/ucp-agent pr..."		2 hours ago	Up 2 hours	0.0.0.0:2376/tcp	ucp-proxy
+
+Para teste vamos selecionar um dos container
+
+	> docker images 			-> checando as imagens e pegando o id de uma delas
+
+Depois de escolhido o container, vamos colocar nele uma tag chamada localhost
+
+	> docker tag ubuntu localhost:5000/ubuntu:ver2
+
+Bom, agora que colocamos uma nova tag no container, vamos armazena-lo no local registry com o comando push
+
+	> docker push  localhost:5000/ubuntu:ver2
+
+Para completar o exemplo vamos apagar o container que acabamos de jogar para o container
+
+	> docker image rm localhost:5000/ubuntu:ver2
+	> docker images
+
+Para recuperar a imagem do registry podemos usar o comando pull
+
+	> docker pull  localhost:5000/ubuntu:ver2
+
+
+
+
+	
+CONFIGURANDO O REGISTRY
+-----------------------------------------------------------------------------
+
+- A configuração é feita atraves de um yml file
+
+Overriding do arquivo de configuração 
+
+- Se a configuração não soa como basica para uso ou se tem problemas chaves de override de um ambiente.
+  Voce pode especificar um arquivo YAML de configuração alternativo apenas montado como como um volume no container
+
+  Tipicamente, criamos um arquivo de configuração do nada. Com nome de config.yml. Então o especificando em um 
+  comando docker run:
+
+	> docker run -d -p 5000:5000  --restart=always  --name registry  -v 'pwd' /config.yml:/etc/docker/registry/config.yml  -registry:2
+
+
+- A primeira vez que for usar o registry, temos que logar
+  Isto nos logará no docker hub
+
+	> docker login
+		Username:
+		Password:
+
+- Para sair do registry
+
+	> docker logout
+
+- Para logar em um local Registry
+
+	> docker login localhost:5000
+
+- Para logar no Docker Trusted Registry (DTR), lembre antes de criar o usuario e uma password
+  e se você for administrador, então:
+
+	> docker login 192.168.1.129		-> logando com IP, mas podemos usar um host name
+		Username (carlos):
+		Password:
+
+
+ 
+EXEMPLO 
+---------------------------------
+
+- logando no docker HUB
+
+	> docker login
+		Usename: daviddavistx 		-> supondo que esse seja o nome de usuario no docker hub
+		Password:
+
+- Para mandar uma imagem para o egistry no docker hub, primeiro é preciso colocar uma tag apropriada com o nome do usuario
+
+	> docker tag nginx:latest  daviddavistax/nginx:latest
+
+- Checndo a imagem
+
+	> docker image ls
+
+- Mandando a image para o docker hub
+
+	> docker push daviddavistx/nginx:latest
+		-> The push refers to a repository [docker.io/daviddavistx/nginx]
+
+- Apagando a imagem para puxa-la novamente
+
+	> docker image rm daviddavistx/nginx:latest
+
+- Agora que apagamos podemos puxá-la devolta novamente
+
+	> docker pull  daviddavistx/nginx:latest
+
+
+
+DOCKER CONTENT TRUSTED
+----------------------------------------
+
+- para imagens privadas com sua private key
+
+
+		
+
+
+DOCKER SEARCH
+----------------------------------
+Este comando permite procurar imagens dentro de um registry
+
+	> docker search [OPTIONS]
+
+	FILTROS
+
+		- stars=<numero de star>
+		- is-automated=(true/false)
+		- is-official=(true/false)
+
+	
+- Executando um search
+
+	> docker search ubuntu
+
+- Limitando o resultado
+
+	> docker search --limit=1 ubuntu
+
+- Limitando o resultado para 100 
+
+	> docker search --limit=100 ubuntu
+
+- Procurando somente as imagens oficiais
+
+	> docker search --filter "is-official=true" ubuntu
+
+- Procurando somente as imagens com 8 estrelas
+
+	> docker search --filter "star=8" ubuntu
+
+- Mescalando filtros
+	> docker search --filter "star=8" --filter "is-official=true" ubuntu
+
+
+- Removendo a imagem, Primeiro se tiver multiplas tags, devemos remover todas as tags
+
+	> docker images rm imatag1 imagetag2 ...
+
+- Se a imagem estiver sendo usada, devemos parar o container, mas podemos forças a remoção com --force
+
+	> docker image rm --force 3f8
+
+
+
+DELETANDO A IMAGEM NO REGISTRY
+--------------------------------------------------------------
+
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
